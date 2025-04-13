@@ -9,7 +9,7 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 # تغییر DNS سرور به 1.1.1.1 و 1.0.0.1
-echo -e "\e[1;33m🌐 تغییر DNS سرور به 1.1.1.1 و 1.0.0.1...\e[0m"
+echo -e "\e[1;33m🌐 تغییر DNS سرور به 8.8.8.8 و 4.2.2.4...\e[0m"
 echo -e "nameserver 8.8.8.8" > /etc/resolv.conf
 echo -e "nameserver 4.2.2.4" >> /etc/resolv.conf
 
@@ -47,6 +47,40 @@ iptables -t nat -F
 iptables -t nat -X
 ipset flush
 
+# ساخت مجموعه ipset
+echo -e "\e[1;33m🛑 ساخت مجموعه IP برای مسدود کردن...\e[0m"
+ipset create blocked_ips hash:net
+
+# اضافه کردن رنج‌های IP به مجموعه ipset
+echo -e "\e[1;33m🛑 افزودن رنج‌های IP به لیست مسدود شده...\e[0m"
+ipset add blocked_ips 10.0.0.0/8
+ipset add blocked_ips 100.64.0.0/10
+ipset add blocked_ips 169.254.0.0/16
+ipset add blocked_ips 172.16.0.0/12
+ipset add blocked_ips 192.0.0.0/24
+ipset add blocked_ips 192.0.2.0/24
+ipset add blocked_ips 192.88.99.0/24
+ipset add blocked_ips 192.168.0.0/16
+ipset add blocked_ips 198.18.0.0/15
+ipset add blocked_ips 198.51.100.0/24
+ipset add blocked_ips 203.0.113.0/24
+ipset add blocked_ips 240.0.0.0/24
+ipset add blocked_ips 224.0.0.0/4
+ipset add blocked_ips 233.252.0.0/24
+ipset add blocked_ips 102.0.0.0/8
+ipset add blocked_ips 185.235.86.0/24
+ipset add blocked_ips 185.235.87.0/24
+ipset add blocked_ips 114.208.187.0/24
+ipset add blocked_ips 216.218.185.0/24
+ipset add blocked_ips 206.191.152.0/24
+ipset add blocked_ips 45.14.174.0/24
+ipset add blocked_ips 195.137.167.0/24
+ipset add blocked_ips 103.58.50.1/24
+ipset add blocked_ips 25.0.0.0/19
+ipset add blocked_ips 25.29.155.0/24
+ipset add blocked_ips 103.29.38.0/24
+ipset add blocked_ips 103.49.99.0/24
+
 # سیاست‌های پیش‌فرض
 iptables -P INPUT DROP
 iptables -P FORWARD DROP
@@ -61,6 +95,9 @@ for port in $PORTS; do
   iptables -A INPUT -p tcp --dport "$port" -j ACCEPT
   iptables -A INPUT -p udp --dport "$port" -j ACCEPT
 done
+
+# مسدود کردن IP‌های موجود در مجموعه ipset
+iptables -A INPUT -m set --match-set blocked_ips src -j DROP
 
 # جلوگیری از اسکن‌های شناخته‌شده
 iptables -A INPUT -p tcp --tcp-flags ALL NONE -j LOG --log-prefix "NULL scan: "
