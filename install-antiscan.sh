@@ -38,7 +38,7 @@ fi
 
 # نصب ابزارهای مورد نیاز
 echo -e "\e[1;33m📦 نصب ابزارهای امنیتی...\e[0m"
-apt update -y && apt install -y iptables ipset iptables-persistent curl > /dev/null
+apt-get update -y && apt-get install -y iptables ipset iptables-persistent curl > /dev/null
 
 # پاکسازی قوانین قبلی
 iptables -F
