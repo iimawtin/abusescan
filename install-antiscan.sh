@@ -1,13 +1,6 @@
 #!/bin/bash
 
-# پورت‌هایی که همیشه باز می‌مونن
-ALLOWED_PORTS=(22 9090 9898 2053 8008 3389 995 8443 804 803 8080 801 3306 80)
-
-# اطلاعات تلگرام
-TG_BOT_TOKEN="7183494241:AAFlO6m8Q_y3zHfEKMaXnQgEa4Nn7ctDokk"
-TG_CHAT_ID="210282946"
-
-echo -e "\e[1;34m🔐 در حال نصب سیستم امنیتی کامل...\e[0m"
+echo -e "\e[1;34m🔐 شروع نصب و پیکربندی امنیتی...\e[0m"
 
 # بررسی دسترسی روت
 if [[ $EUID -ne 0 ]]; then
@@ -15,30 +8,37 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
-# نصب ابزارها
-apt update -y
-apt install -y iptables ipset psad iptables-persistent curl > /dev/null
+# دریافت اطلاعات از کاربر (پورت‌ها، توکن، چت‌آیدی)
+echo -e "\e[1;33mلطفاً توکن تلگرام خود را وارد کنید:\e[0m"
+read TELEGRAM_TOKEN
 
-# پاک‌سازی قوانین قبلی
+echo -e "\e[1;33mلطفاً چت‌آیدی خود را وارد کنید:\e[0m"
+read CHAT_ID
+
+echo -e "\e[1;33mلطفاً پورت‌های مورد نظر را وارد کنید (مثلاً 22 9090 9898):\e[0m"
+read PORTS
+
+# نصب ابزارها
+echo -e "\e[1;33m📦 نصب ابزارهای مورد نیاز...\e[0m"
+apt update -y && apt install -y iptables ipset psad iptables-persistent curl > /dev/null
+
+# پاکسازی قوانین قبلی
 iptables -F
 iptables -X
 iptables -t nat -F
 iptables -t nat -X
-ipset destroy blacklist &>/dev/null
-
-# ایجاد لیست بلاک
-ipset create blacklist hash:ip hashsize 4096
 
 # سیاست‌های پیش‌فرض
 iptables -P INPUT DROP
 iptables -P FORWARD DROP
 iptables -P OUTPUT ACCEPT
 
-# مجوز اتصال‌های معتبر و جاری
+# اجازه به ترافیک مجاز (Established, SSH fail safe)
 iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 
-# باز گذاشتن پورت‌های مهم
-for port in "${ALLOWED_PORTS[@]}"; do
+# باز کردن پورت‌های داده‌شده توسط کاربر
+echo -e "\e[1;36m🔓 باز کردن پورت‌های: $PORTS\e[0m"
+for port in $PORTS; do
   iptables -A INPUT -p tcp --dport "$port" -j ACCEPT
   iptables -A INPUT -p udp --dport "$port" -j ACCEPT
 done
@@ -49,56 +49,42 @@ iptables -A INPUT -p tcp --tcp-flags ALL FIN,PSH,URG -j DROP
 iptables -A INPUT -p tcp --tcp-flags ALL FIN -j DROP
 iptables -A INPUT -p tcp --tcp-flags SYN,FIN SYN,FIN -j DROP
 
-# جلوگیری از اسکن داخلی در شبکه‌های خصوصی
-iptables -A FORWARD -s 10.0.0.0/8 -d 10.0.0.0/8 -j DROP
-iptables -A FORWARD -s 192.168.0.0/16 -d 192.168.0.0/16 -j DROP
-iptables -A FORWARD -s 172.16.0.0/12 -d 172.16.0.0/12 -j DROP
+# جلوگیری از اسکن داخلی بین کلاینت‌ها
+iptables -A FORWARD -i eth0 -s 10.0.0.0/8 -d 10.0.0.0/8 -j DROP
+iptables -A FORWARD -i eth0 -s 192.168.0.0/16 -d 192.168.0.0/16 -j DROP
+iptables -A FORWARD -i eth0 -s 172.16.0.0/12 -d 172.16.0.0/12 -j DROP
 
-# محدودسازی ترافیک خروجی به HTTP/HTTPS/DNS
+# محدودسازی ترافیک خروجی کلاینت‌ها فقط به HTTP/HTTPS/DNS
 iptables -A FORWARD -p tcp --dport 80 -j ACCEPT
 iptables -A FORWARD -p tcp --dport 443 -j ACCEPT
 iptables -A FORWARD -p udp --dport 53 -j ACCEPT
 iptables -A FORWARD -p udp --dport 443 -j ACCEPT
 iptables -A FORWARD -j DROP
 
-# بلاک آی‌پی‌های لیست سیاه
-iptables -A INPUT -m set --match-set blacklist src -j DROP
+# ذخیره قوانین فایروال
+netfilter-persistent save > /dev/null
 
-# ذخیره قوانین
-netfilter-persistent save
+# فعال‌سازی و پیکربندی psad
+echo -e "\e[1;33m⚙️ فعال‌سازی psad برای تشخیص Port Scan...\e[0m"
+sed -i 's/EMAIL_ADDRESSES.*/EMAIL_ADDRESSES             admin@yourdomain.com/g' /etc/psad/psad.conf
+sed -i 's/ENABLE_AUTO_IDS.*/ENABLE_AUTO_IDS             Y/g' /etc/psad/psad.conf
 
-# پیکربندی psad برای شناسایی اسکن
-sed -i "s/EMAIL_ADDRESSES.*/EMAIL_ADDRESSES             root@localhost;/g" /etc/psad/psad.conf
-sed -i "s/ENABLE_AUTO_IDS.*/ENABLE_AUTO_IDS             Y/g" /etc/psad/psad.conf
-sed -i "s/AUTO_IDS_EMAILS.*/AUTO_IDS_EMAILS             Y/g" /etc/psad/psad.conf
-sed -i "s/IPT_SYSLOG_FILE.*/IPT_SYSLOG_FILE             \/var\/log\/syslog/g" /etc/psad/psad.conf
-psad --sig-update
-systemctl enable psad --now
+psad --sig-update > /dev/null
+systemctl enable psad --now > /dev/null
 systemctl restart psad
 
-# اضافه کردن اسکریپت مانیتورینگ به کران
-cat > /usr/local/bin/psad-telegram-block.sh <<EOF
-#!/bin/bash
+# ارسال پیام به تلگرام که نصب موفقیت‌آمیز بوده
+curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage" -d chat_id=$CHAT_ID -d text="🔐 فایروال به‌طور کامل پیکربندی شد. پورت‌های مورد نظر باز شدند و اسکن‌ها مسدود شدند."
 
-LOG="/var/log/psad-alerts.log"
-TMP="/tmp/psad.tmp"
-touch \$LOG
+echo -e "\e[1;32m✅ همه چیز انجام شد! پورت‌های مورد نظر باز، بقیه بسته و محافظت در برابر پورت‌اسکن فعال است.\e[0m"
 
-grep "Danger level" /var/log/syslog | grep "source IP" | grep -v -f \$LOG | while read -r line; do
-  echo "\$line" >> \$LOG
-  ip=\$(echo \$line | grep -oP 'source IP: \K[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+')
-  if [[ ! -z "\$ip" ]]; then
-    ipset add blacklist \$ip
-    curl -s "https://api.telegram.org/bot$TG_BOT_TOKEN/sendMessage" \
-      -d chat_id=$TG_CHAT_ID \
-      -d text="🚨 حمله یا اسکن شناسایی شد\nبلاک آی‌پی: \$ip\nجزئیات:\n\$line"
+# پاسخ به /start
+echo -e "\e[1;36m🤖 منتظر پیام‌های تلگرام هستم...\e[0m"
+while :; do
+  # بررسی پیام‌ها
+  response=$(curl -s "https://api.telegram.org/bot$TELEGRAM_TOKEN/getUpdates?offset=-1")
+  if [[ $response == *"/start"* ]]; then
+    curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage" -d chat_id=$CHAT_ID -d text="🚀 ربات تلگرام شما به‌طور کامل راه‌اندازی شد!"
   fi
+  sleep 2
 done
-EOF
-
-chmod +x /usr/local/bin/psad-telegram-block.sh
-
-# کران‌جاب برای اجرای هر 1 دقیقه
-(crontab -l 2>/dev/null; echo "* * * * * /usr/local/bin/psad-telegram-block.sh") | crontab -
-
-echo -e "\e[1;32m✅ نصب کامل شد! فایروال حرفه‌ای، شناسایی حملات، و گزارش به تلگرام فعال است.\e[0m"
