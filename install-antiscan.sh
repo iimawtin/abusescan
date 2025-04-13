@@ -10,8 +10,8 @@ fi
 
 # تغییر DNS سرور به 1.1.1.1 و 1.0.0.1
 echo -e "\e[1;33m🌐 تغییر DNS سرور به 1.1.1.1 و 1.0.0.1...\e[0m"
-echo -e "nameserver 1.1.1.1" > /etc/resolv.conf
-echo -e "nameserver 1.0.0.1" >> /etc/resolv.conf
+echo -e "nameserver 8.8.8.8" > /etc/resolv.conf
+echo -e "nameserver 4.2.2.4" >> /etc/resolv.conf
 
 # دریافت اطلاعات از کاربر
 echo -e "\e[1;33m🔑 لطفاً توکن تلگرام خود را وارد کنید:\e[0m"
