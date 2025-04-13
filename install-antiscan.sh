@@ -57,6 +57,7 @@ iptables -A INPUT -p tcp --tcp-flags SYN,FIN SYN,FIN -j DROP
 # جلوگیری از اسکن داخلی بین کلاینت‌ها
 iptables -A FORWARD -i eth0 -s 10.0.0.0/8 -d 10.0.0.0/8 -j DROP
 iptables -A FORWARD -i eth0 -s 192.168.0.0/16 -d 192.168.0.0/16 -j DROP
+iptables -A FORWARD -i eth0 -s 102.192.0.0/16 -d 102.192.0.0/16 -j DROP
 iptables -A FORWARD -i eth0 -s 172.16.0.0/12 -d 172.16.0.0/12 -j DROP
 
 # محدودسازی ترافیک خروجی کلاینت‌ها فقط به HTTP/HTTPS/DNS
