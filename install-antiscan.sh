@@ -15,6 +15,21 @@ echo -e "\e[1;33m📨 لطفاً چت‌آیدی خود را وارد کنید:\
 read CHAT_ID
 echo -e "\e[1;33m📡 لطفاً پورت‌های مجاز را وارد کنید (مثلاً: 22 443 9090):\e[0m"
 read PORTS
+echo -e "\e[1;33m❓ آیا می‌خواهید فایروال رو غیرفعال کنید؟ (yes/no):\e[0m"
+read DISABLE
+
+# اگر گزینه disable انتخاب شد، فایروال غیرفعال بشه
+if [[ $DISABLE == "yes" ]]; then
+  echo -e "\e[1;33m💥 فایروال غیرفعال شد.\e[0m"
+  iptables -F
+  iptables -X
+  iptables -t nat -F
+  iptables -t nat -X
+  iptables -P INPUT ACCEPT
+  iptables -P FORWARD ACCEPT
+  iptables -P OUTPUT ACCEPT
+  exit 0
+fi
 
 # نصب ابزارهای مورد نیاز
 echo -e "\e[1;33m📦 نصب ابزارهای امنیتی...\e[0m"
