@@ -8,7 +8,29 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
-# تغییر DNS سرور به 1.1.1.1 و 1.0.0.1
+# نصب iptables-persistent برای حفظ قوانین بعد از ریبوت
+echo -e "\e[1;33m📦 نصب iptables-persistent...\e[0m"
+apt-get update -y >/dev/null 2>&1
+DEBIAN_FRONTEND=noninteractive apt-get install -y iptables-persistent >/dev/null 2>&1
+echo -e "\e[1;32m✅ iptables-persistent نصب شد.\e[0m"
+
+# تنظیم logrotate برای مدیریت لاگ‌ها
+echo -e "\e[1;33m🌀 تنظیم logrotate برای /var/log/firewall.log...\e[0m"
+cat <<EOF > /etc/logrotate.d/firewall
+/var/log/firewall.log {
+    daily
+    rotate 1
+    missingok
+    notifempty
+    nocompress
+    create 640 root adm
+    dateext
+    maxage 3
+}
+EOF
+echo -e "\e[1;32m✅ logrotate تنظیم شد (هر 3 روز حذف نسخه قدیمی).\e[0m"
+
+# تغییر DNS سرور
 echo -e "\e[1;33m🌐 تغییر DNS سرور به 8.8.8.8 و 4.2.2.4...\e[0m"
 echo -e "nameserver 8.8.8.8" > /etc/resolv.conf
 echo -e "nameserver 4.2.2.4" >> /etc/resolv.conf
