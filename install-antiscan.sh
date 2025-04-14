@@ -111,6 +111,8 @@ ipset add blacklist 14.136.0.0/24
 ipset add blacklist 1.34.0.0/24
 ipset add blacklist 213.195.0.0/24
 ipset add blacklist 220.133.0.0/24
+ipset save > /etc/abuse-blocklist.conf
+grep -q 'ipset restore < /etc/abuse-blocklist.conf' /etc/crontab || echo "@reboot root ipset restore < /etc/abuse-blocklist.conf" >> /etc/crontab
 
 # سیاست‌های پیش‌فرض
 iptables -P INPUT DROP
