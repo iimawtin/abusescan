@@ -109,6 +109,8 @@ ipset add blacklist 103.49.99.0/24
 ipset add blacklist 1.174.0.0/24
 ipset add blacklist 14.136.0.0/24
 ipset add blacklist 1.34.0.0/24
+ipset add blacklist 213.195.0.0/24
+ipset add blacklist 220.133.0.0/24
 
 # سیاست‌های پیش‌فرض
 iptables -P INPUT DROP
@@ -147,6 +149,7 @@ iptables -A FORWARD -i eth0 -s 10.0.0.0/8 -d 10.0.0.0/8 -j DROP
 iptables -A FORWARD -i eth0 -s 192.168.0.0/16 -d 192.168.0.0/16 -j DROP
 iptables -A FORWARD -i eth0 -s 102.192.0.0/16 -d 102.192.0.0/16 -j DROP
 iptables -A FORWARD -i eth0 -s 172.16.0.0/12 -d 172.16.0.0/12 -j DROP
+iptables -A FORWARD -i eth0 -s 192.0.0.0/12 -d 192.0.0.0/12 -j DROP
 
 # محدودسازی ترافیک خروجی کلاینت‌ها فقط به HTTP/HTTPS/DNS
 iptables -A FORWARD -p tcp --dport 80 -j ACCEPT
