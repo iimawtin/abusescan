@@ -72,47 +72,17 @@ iptables -t nat -F
 iptables -t nat -X
 ipset flush
 
-# ساخت مجموعه ipset
-echo -e "\e[1;33m🛑 ساخت مجموعه IP برای مسدود کردن...\e[0m"
-ipset create blacklist hash:net
-ipset create blacklist_subnet hash:net
+# 📥 دانلود اسکریپت update-blacklist.sh اگر وجود نداشت
+if [[ ! -f /usr/local/bin/update-blacklist.sh ]]; then
+  echo -e "\e[1;36m📥 در حال دانلود update-blacklist.sh از GitHub...\e[0m"
+  curl -fsSL https://raw.githubusercontent.com/iimawtin/abusescan/main/update-blacklist.sh -o /usr/local/bin/update-blacklist.sh
+  chmod +x /usr/local/bin/update-blacklist.sh
+  echo -e "\e[1;32m✅ فایل update-blacklist.sh با موفقیت دانلود شد.\e[0m"
+fi
 
-# اضافه کردن رنج‌های IP به مجموعه ipset
-echo -e "\e[1;33m🛑 افزودن رنج‌های IP به لیست مسدود شده...\e[0m"
-ipset add blacklist 10.0.0.0/8
-ipset add blacklist 100.64.0.0/10
-ipset add blacklist 169.254.0.0/16
-ipset add blacklist 172.16.0.0/12
-ipset add blacklist 192.0.0.0/24
-ipset add blacklist 192.0.2.0/24
-ipset add blacklist 192.88.99.0/24
-ipset add blacklist 192.168.0.0/16
-ipset add blacklist 198.18.0.0/15
-ipset add blacklist 198.51.100.0/24
-ipset add blacklist 203.0.113.0/24
-ipset add blacklist 240.0.0.0/24
-ipset add blacklist 224.0.0.0/4
-ipset add blacklist 233.252.0.0/24
-ipset add blacklist 102.0.0.0/8
-ipset add blacklist 185.235.86.0/24
-ipset add blacklist 185.235.87.0/24
-ipset add blacklist 114.208.187.0/24
-ipset add blacklist 216.218.185.0/24
-ipset add blacklist 206.191.152.0/24
-ipset add blacklist 45.14.174.0/24
-ipset add blacklist 195.137.167.0/24
-ipset add blacklist 103.58.50.1/24
-ipset add blacklist 25.0.0.0/19
-ipset add blacklist 25.29.155.0/24
-ipset add blacklist 103.29.38.0/24
-ipset add blacklist 103.49.99.0/24
-ipset add blacklist 1.174.0.0/24
-ipset add blacklist 14.136.0.0/24
-ipset add blacklist 1.34.0.0/24
-ipset add blacklist 213.195.0.0/24
-ipset add blacklist 220.133.0.0/24
-ipset save > /etc/abuse-blocklist.conf
-grep -q 'ipset restore < /etc/abuse-blocklist.conf' /etc/crontab || echo "@reboot root ipset restore < /etc/abuse-blocklist.conf" >> /etc/crontab
+# ▶️ اجرای اسکریپت لیست ipset بلاک‌شده‌ها
+bash /usr/local/bin/update-blacklist.sh
+
 
 # سیاست‌های پیش‌فرض
 iptables -P INPUT DROP
