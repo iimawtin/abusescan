@@ -191,7 +191,7 @@ for ip in $(sort $TMPFILE | uniq); do
     subnet=$(echo $ip | awk -F. '{print $1"."$2"."$3".0/24"}')
     ipset add $IPSET_SUBNET_BLOCK $subnet
     curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage" \
- -d "chat_id=$CHAT_ID&text=🚨 آی‌پی مشکوک به اسکن: $IP در سرور $HOSTNAME بلاک شد." > /dev/null
+ -d "chat_id=$CHAT_ID&text=🚨 آی‌پی مشکوک به اسکن: $IP در سرور $HOSTNAME مادرش گاییده شد." > /dev/null
   fi
 done
 EOF
