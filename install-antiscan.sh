@@ -103,6 +103,9 @@ ipset add blacklist 25.0.0.0/19
 ipset add blacklist 25.29.155.0/24
 ipset add blacklist 103.29.38.0/24
 ipset add blacklist 103.49.99.0/24
+ipset add blacklist 1.174.0.0/24
+ipset add blacklist 14.136.0.0/24
+ipset add blacklist 1.34.0.0/24
 
 # سیاست‌های پیش‌فرض
 iptables -P INPUT DROP
