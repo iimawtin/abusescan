@@ -8,6 +8,9 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
+#دریافت هاست نیم
+HOSTNAME=$(hostname)
+
 # نصب iptables-persistent برای حفظ قوانین بعد از ریبوت
 echo -e "\e[1;33m📦 نصب iptables-persistent...\e[0m"
 apt-get update -y >/dev/null 2>&1
