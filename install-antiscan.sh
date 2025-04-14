@@ -8,29 +8,7 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
-# نصب iptables-persistent برای حفظ قوانین بعد از ریبوت
-echo -e "\e[1;33m📦 نصب iptables-persistent...\e[0m"
-apt-get update -y >/dev/null 2>&1
-DEBIAN_FRONTEND=noninteractive apt-get install -y iptables-persistent >/dev/null 2>&1
-echo -e "\e[1;32m✅ iptables-persistent نصب شد.\e[0m"
-
-# تنظیم logrotate برای مدیریت لاگ‌ها
-echo -e "\e[1;33m🌀 تنظیم logrotate برای /var/log/firewall.log...\e[0m"
-cat <<EOF > /etc/logrotate.d/firewall
-/var/log/firewall.log {
-    daily
-    rotate 1
-    missingok
-    notifempty
-    nocompress
-    create 640 root adm
-    dateext
-    maxage 3
-}
-EOF
-echo -e "\e[1;32m✅ logrotate تنظیم شد (هر 3 روز حذف نسخه قدیمی).\e[0m"
-
-# تغییر DNS سرور
+# تغییر DNS سرور به 1.1.1.1 و 1.0.0.1
 echo -e "\e[1;33m🌐 تغییر DNS سرور به 8.8.8.8 و 4.2.2.4...\e[0m"
 echo -e "nameserver 8.8.8.8" > /etc/resolv.conf
 echo -e "nameserver 4.2.2.4" >> /etc/resolv.conf
@@ -45,53 +23,6 @@ read PORTS
 echo -e "\e[1;33m❓ آیا می‌خواهید فایروال رو غیرفعال کنید؟ (yes/no):\e[0m"
 read DISABLE
 
-# تعریف ipset برای لیست بلاک‌شده‌ها
-ipset create blacklist hash:net -exist
-
-# ساخت مجموعه ipset
-echo -e "\e[1;33m🛑 ساخت مجموعه IP برای مسدود کردن...\e[0m"
-ipset create blocked_ips hash:net
-
-# اضافه کردن رنج‌های IP به مجموعه ipset
-echo -e "\e[1;33m🛑 افزودن رنج‌های IP به لیست مسدود شده...\e[0m"
-ipset add blocked_ips 10.0.0.0/8
-ipset add blocked_ips 100.64.0.0/10
-ipset add blocked_ips 169.254.0.0/16
-ipset add blocked_ips 172.16.0.0/12
-ipset add blocked_ips 192.0.0.0/24
-ipset add blocked_ips 192.0.2.0/24
-ipset add blocked_ips 192.88.99.0/24
-ipset add blocked_ips 192.168.0.0/16
-ipset add blocked_ips 198.18.0.0/15
-ipset add blocked_ips 198.51.100.0/24
-ipset add blocked_ips 203.0.113.0/24
-ipset add blocked_ips 240.0.0.0/24
-ipset add blocked_ips 224.0.0.0/4
-ipset add blocked_ips 233.252.0.0/24
-ipset add blocked_ips 102.0.0.0/8
-ipset add blocked_ips 185.235.86.0/24
-ipset add blocked_ips 185.235.87.0/24
-ipset add blocked_ips 114.208.187.0/24
-ipset add blocked_ips 216.218.185.0/24
-ipset add blocked_ips 206.191.152.0/24
-ipset add blocked_ips 45.14.174.0/24
-ipset add blocked_ips 195.137.167.0/24
-ipset add blocked_ips 103.58.50.1/24
-ipset add blocked_ips 25.0.0.0/19
-ipset add blocked_ips 25.29.155.0/24
-ipset add blocked_ips 103.29.38.0/24
-ipset add blocked_ips 103.49.99.0/24
-ipset add blocked_ips 1.174.0.0/24
-ipset add blocked_ips 14.136.0.0/24
-ipset add blocked_ips 1.34.0.0/24
-
-# پاکسازی قوانین قبلی
-iptables -F
-iptables -X
-iptables -t nat -F
-iptables -t nat -X
-ipset flush
-
 # اگر گزینه disable انتخاب شد، فایروال غیرفعال بشه
 if [[ $DISABLE == "yes" ]]; then
   echo -e "\e[1;33m💥 فایروال غیرفعال شد.\e[0m"
@@ -105,25 +36,70 @@ if [[ $DISABLE == "yes" ]]; then
   exit 0
 fi
 
-# اجازه به ترافیک‌های مربوط به کانکشن‌های معتبر و لوکال
+# نصب ابزارهای مورد نیاز
+echo -e "\e[1;33m📦 نصب ابزارهای امنیتی...\e[0m"
+apt-get update -y && apt-get install -y iptables ipset iptables-persistent curl > /dev/null
+
+# پاکسازی قوانین قبلی
+iptables -F
+iptables -X
+iptables -t nat -F
+iptables -t nat -X
+ipset flush
+
+# ساخت مجموعه ipset
+echo -e "\e[1;33m🛑 ساخت مجموعه IP برای مسدود کردن...\e[0m"
+ipset create blacklist hash:net
+ipset create blacklist_subnet hash:net
+
+# اضافه کردن رنج‌های IP به مجموعه ipset
+echo -e "\e[1;33m🛑 افزودن رنج‌های IP به لیست مسدود شده...\e[0m"
+ipset add blacklist 10.0.0.0/8
+ipset add blacklist 100.64.0.0/10
+ipset add blacklist 169.254.0.0/16
+ipset add blacklist 172.16.0.0/12
+ipset add blacklist 192.0.0.0/24
+ipset add blacklist 192.0.2.0/24
+ipset add blacklist 192.88.99.0/24
+ipset add blacklist 192.168.0.0/16
+ipset add blacklist 198.18.0.0/15
+ipset add blacklist 198.51.100.0/24
+ipset add blacklist 203.0.113.0/24
+ipset add blacklist 240.0.0.0/24
+ipset add blacklist 224.0.0.0/4
+ipset add blacklist 233.252.0.0/24
+ipset add blacklist 102.0.0.0/8
+ipset add blacklist 185.235.86.0/24
+ipset add blacklist 185.235.87.0/24
+ipset add blacklist 114.208.187.0/24
+ipset add blacklist 216.218.185.0/24
+ipset add blacklist 206.191.152.0/24
+ipset add blacklist 45.14.174.0/24
+ipset add blacklist 195.137.167.0/24
+ipset add blacklist 103.58.50.1/24
+ipset add blacklist 25.0.0.0/19
+ipset add blacklist 25.29.155.0/24
+ipset add blacklist 103.29.38.0/24
+ipset add blacklist 103.49.99.0/24
+
+# سیاست‌های پیش‌فرض
+iptables -P INPUT DROP
+iptables -P FORWARD DROP
+iptables -P OUTPUT ACCEPT
+
+# مجاز کردن ترافیک پاسخ و پینگ
 iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-iptables -A INPUT -i lo -j ACCEPT
+iptables -A INPUT -p icmp -j ACCEPT  # اجازه پینگ
 
-# اجازه به پینگ (ICMP)
-iptables -A INPUT -p icmp -j ACCEPT
-
-# اجازه به پورت‌های مجاز وارد شده توسط کاربر
+# باز کردن پورت‌های مجاز
 for port in $PORTS; do
-  iptables -A INPUT -p tcp --dport $port -j ACCEPT
-  iptables -A INPUT -p udp --dport $port -j ACCEPT
+  iptables -A INPUT -p tcp --dport "$port" -j ACCEPT
+  iptables -A INPUT -p udp --dport "$port" -j ACCEPT
 done
 
-# بلاک کردن IPهایی که در ipset هستند
+# مسدود کردن IP‌های موجود در مجموعه ipset
 iptables -A INPUT -m set --match-set blacklist src -j DROP
 iptables -A INPUT -m set --match-set blacklist_subnet src -j DROP
-
-# بلاک بقیه ورودی‌ها
-iptables -A INPUT -j DROP
 
 # جلوگیری از اسکن‌های شناخته‌شده
 iptables -A INPUT -p tcp --tcp-flags ALL NONE -j LOG --log-prefix "NULL scan: "
@@ -151,11 +127,15 @@ iptables -A FORWARD -p udp --dport 53 -j ACCEPT
 iptables -A FORWARD -p udp --dport 443 -j ACCEPT
 iptables -A FORWARD -j DROP
 
+# لاگ‌گیری از تلاش‌های مسدودشده
+iptables -A INPUT -j LOG --log-prefix "BLOCKED INPUT: " --log-level 4
+iptables -A FORWARD -j LOG --log-prefix "BLOCKED FORWARD: " --log-level 4
+
 # ذخیره قوانین فایروال
 netfilter-persistent save > /dev/null
 
-# ذخیره قوانین
-iptables-save > /etc/iptables/rules.v4
+# ساخت cron job برای بررسی لاگ‌ها و بلاک آی‌پی‌های مشکوک
+echo "*/2 * * * * root /usr/local/bin/firewall-log-watcher.sh" > /etc/cron.d/firewall-logger
 
 # ساخت اسکریپت مانیتورینگ و شناسایی حملات
 cat << 'EOF' > /usr/local/bin/firewall-monitor.sh
@@ -184,13 +164,11 @@ for ip in $(sort $TMPFILE | uniq); do
 done
 EOF
 
-# جایگزینی توکن و چت‌آیدی در اسکریپت مانیتورینگ
-sed -i "s|__TOKEN__|$TELEGRAM_TOKEN|g" /usr/local/bin/firewall-monitor.sh
-sed -i "s|__CHATID__|$CHAT_ID|g" /usr/local/bin/firewall-monitor.sh
+chmod +x /usr/local/bin/firewall-log-watcher.sh
 
-chmod +x /usr/local/bin/firewall-monitor.sh
+# اطلاع به تلگرام
+curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage" \
+     -d chat_id=$CHAT_ID \
+     -d text="🛡️ فایروال سخت‌گیرانه با لاگ‌گیری و بلاک خودکار آی‌پی‌های مشکوک راه‌اندازی شد."
 
-# افزودن به کران‌جاب برای اجرای هر 1 دقیقه
-(crontab -l 2>/dev/null; echo "* * * * * /usr/local/bin/firewall-monitor.sh") | crontab -
-
-echo -e "\e[1;32m✅ پیکربندی با موفقیت انجام شد و فایروال فعال است.\e[0m"
+echo -e "\e[1;32m✅ فایروال سخت‌گیرانه با موفقیت فعال شد. آماده دفاع در برابر حملات هستید!\e[0m"
