@@ -182,9 +182,8 @@ for ip in $(sort $TMPFILE | uniq); do
     ipset add $IPSET_BLOCK $ip
     subnet=$(echo $ip | awk -F. '{print $1"."$2"."$3".0/24"}')
     ipset add $IPSET_SUBNET_BLOCK $subnet
-    curl -s "https://api.telegram.org/bot$TOKEN/sendMessage" \
-      -d chat_id="$CHAT_ID" \
-      -d text="🚨 حمله شناسایی شد در سرور: $HOSTNAME%0A📍 IP: $ip%0A📦 Subnet: $subnet بلاک شد." > /dev/null
+    curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage" \
+ -d "chat_id=$CHAT_ID&text=🚨 آی‌پی مشکوک به اسکن: $IP در سرور $HOSTNAME بلاک شد." > /dev/null
   fi
 done
 EOF
@@ -193,7 +192,6 @@ chmod +x /usr/local/bin/firewall-log-watcher.sh
 
 # اطلاع به تلگرام
 curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage" \
-     -d chat_id=$CHAT_ID \
-     -d text="🛡️ فایروال سخت‌گیرانه با لاگ‌گیری و بلاک خودکار آی‌پی‌های مشکوک راه‌اندازی شد.  $HOSTNAME%0A📍"
+ -d "chat_id=$CHAT_ID&text=🚨 آی‌پی مشکوک به اسکن: $IP در سرور $HOSTNAME بلاک شد."
 
 echo -e "\e[1;32m✅ فایروال سخت‌گیرانه با موفقیت فعال شد. آماده دفاع در برابر حملات هستید!\e[0m"
