@@ -66,13 +66,20 @@ fi
 # پاکسازی قوانین قبلی
 iptables -F
 iptables -X
-iptables -Z
 iptables -t nat -F
-iptables -t mangle -F
+iptables -t nat -X
+ipset flush
 
-# اگر کاربر خواست فایروال غیرفعال شود
-if [[ "$DISABLE" == "yes" ]]; then
-  echo -e "\e[1;31m⛔ فایروال غیرفعال شد.\e[0m"
+# اگر گزینه disable انتخاب شد، فایروال غیرفعال بشه
+if [[ $DISABLE == "yes" ]]; then
+  echo -e "\e[1;33m💥 فایروال غیرفعال شد.\e[0m"
+  iptables -F
+  iptables -X
+  iptables -t nat -F
+  iptables -t nat -X
+  iptables -P INPUT ACCEPT
+  iptables -P FORWARD ACCEPT
+  iptables -P OUTPUT ACCEPT
   exit 0
 fi
 
