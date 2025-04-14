@@ -108,7 +108,7 @@ ipset add blacklist 103.29.38.0/24
 ipset add blacklist 103.49.99.0/24
 ipset add blacklist 1.174.0.0/24
 ipset add blacklist 14.136.0.0/24
-ipset add blacklist 1.34.0.0/12
+ipset add blacklist 1.34.0.0/24
 ipset add blacklist 213.195.0.0/24
 ipset add blacklist 220.133.0.0/24
 ipset save > /etc/abuse-blocklist.conf
