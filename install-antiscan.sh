@@ -174,11 +174,23 @@ for ip in $(sort $TMPFILE | uniq); do
     ipset add $IPSET_BLOCK $ip
     subnet=$(echo $ip | awk -F. '{print $1"."$2"."$3".0/24"}')
     ipset add $IPSET_SUBNET_BLOCK $subnet
-    curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage" \
- -d "chat_id=$CHAT_ID&text=🚨 آی‌پی مشکوک به اسکن: $IP در سرور $HOSTNAME مادرش گاییده شد." > /dev/null
+
+    # لاگ محلی
+    echo "$(date) - Blocked IP: $ip from $HOSTNAME" >> /var/log/firewall.log
+
+    # ارسال پیام به تلگرام
+    curl -s -X POST "https://api.telegram.org/bot$TOKEN/sendMessage" \
+    -d "chat_id=$CHAT_ID&text=🚨 آی‌پی مشکوک به اسکن: $ip در سرور $HOSTNAME مادرش گاییده شد." > /dev/null
   fi
 done
 EOF
+
+# جایگزینی توکن و چت‌آیدی واقعی در فایل ساخته‌شده
+sed -i "s|__TOKEN__|$TELEGRAM_TOKEN|g" /usr/local/bin/firewall-monitor.sh
+sed -i "s|__CHATID__|$CHAT_ID|g" /usr/local/bin/firewall-monitor.sh
+
+# اجرای قابل‌اجرا کردن فایل
+chmod +x /usr/local/bin/firewall-monitor.sh
 
 chmod +x /usr/local/bin/firewall-log-watcher.sh
 
