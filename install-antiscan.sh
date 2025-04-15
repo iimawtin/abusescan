@@ -143,7 +143,7 @@ for ip in $(sort $TMPFILE | uniq); do
     ipset add $IPSET_SUBNET_BLOCK $subnet
     echo "$(date) - Blocked IP: $ip from $HOSTNAME" >> /var/log/firewall.log
     curl -s -X POST "https://api.telegram.org/bot$TOKEN/sendMessage" \
-    -d "chat_id=$CHAT_ID&text=🚨 آی‌پی $ip در سرور $HOSTNAME بلاک شد." > /dev/null
+    -d "chat_id=$CHAT_ID&text=🚨 آی‌پی $ip در سرور $HOSTNAME مادرش گاییده شد." > /dev/null
   fi
 done
 EOF
@@ -156,6 +156,6 @@ chmod +x /usr/local/bin/firewall-monitor.sh
 # اطلاع‌رسانی نهایی
 curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage" \
      -d chat_id=$CHAT_ID \
-     -d text="🛡️ فایروال AidenGuard با لاگ‌گیری و بلاک خودکار آی‌پی‌های مشکوک راه‌اندازی شد. در سرور $HOSTNAME"
+     -d text="🛡️  فایروال کیری قویه AidenGuard با لاگ‌گیری و بلاک خودکار آی‌پی‌های مشکوک راه‌اندازی شد. در سرور $HOSTNAME"
 
 echo -e "\e[1;32m📄 اسکریپت فایروال با موفقیت اجرا شد.\e[0m"
