@@ -131,8 +131,12 @@ iptables -A FORWARD -p udp --dport 443 -j ACCEPT
 iptables -A FORWARD -j DROP
 
 # لاگ‌گیری از تلاش‌های مسدودشده
-iptables -A INPUT -j LOG --log-prefix "BLOCKED INPUT: " --log-level 4
-iptables -A FORWARD -j LOG --log-prefix "BLOCKED FORWARD: " --log-level 4
+#iptables -A INPUT -j LOG --log-prefix "BLOCKED INPUT: " --log-level 4
+#iptables -A FORWARD -j LOG --log-prefix "BLOCKED FORWARD: " --log-level 4
+iptables -A INPUT -p tcp --tcp-flags ALL NONE -j LOG --log-prefix "NULL scan: "
+iptables -A INPUT -p tcp --tcp-flags ALL FIN,PSH,URG -j LOG --log-prefix "XMAS scan: "
+iptables -A INPUT -p tcp --tcp-flags ALL FIN -j LOG --log-prefix "FIN scan: "
+iptables -A INPUT -p tcp --tcp-flags SYN,FIN SYN,FIN -j LOG --log-prefix "SYN/FIN scan: "
 
 # ذخیره قوانین فایروال
 netfilter-persistent save > /dev/null
