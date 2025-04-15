@@ -93,8 +93,17 @@ iptables -P OUTPUT ACCEPT
 iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 iptables -A INPUT -p icmp -j ACCEPT  # اجازه پینگ
 
-# باز کردن پورت‌های مجاز
-for port in $PORTS; do
+# پورت‌هایی که همیشه باید باز بمونن
+INTERNAL_ALLOWED_PORTS="22 62789 8443 8080 3306 80 53 5228 443 123 10085"
+
+# پورت‌هایی که کاربر وارد کرده
+USER_PORTS="$PORTS"
+
+# ادغام همه پورت‌ها بدون تکرار
+ALL_PORTS=$(echo "$USER_PORTS $INTERNAL_ALLOWED_PORTS" | tr ' ' '\n' | sort -u | tr '\n' ' ')
+
+# باز کردن همه پورت‌ها
+for port in $ALL_PORTS; do
   iptables -A INPUT -p tcp --dport "$port" -j ACCEPT
   iptables -A INPUT -p udp --dport "$port" -j ACCEPT
 done
@@ -142,7 +151,8 @@ iptables -A INPUT -p tcp --tcp-flags SYN,FIN SYN,FIN -j LOG --log-prefix "SYN/FI
 netfilter-persistent save > /dev/null
 
 # ساخت cron job برای بررسی لاگ‌ها و بلاک آی‌پی‌های مشکوک
-echo "*/2 * * * * root /usr/local/bin/firewall-log-watcher.sh" > /etc/cron.d/firewall-logger
+rm -f /etc/cron.d/firewall-logger
+echo "*/10 * * * * root /usr/local/bin/firewall-log-watcher.sh" > /etc/cron.d/firewall-logger
 
 # ساخت اسکریپت مانیتورینگ و شناسایی حملات
 cat << 'EOF' > /usr/local/bin/firewall-monitor.sh
