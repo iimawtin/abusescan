@@ -2,8 +2,12 @@
 #!/bin/bash
 
 clear
-echo -e "\e[1;36m🛡️ AidenGuard | iimaWtin Security Firewall Menu\e[0m"
-echo "==============================================="
+banner() {
+  echo -e "\n\033[1;34m    →→→→→→→→→→→→→→→→→\033[0m"
+  echo -e "\033[1;34m    → \033[1;32m🌐 iimawtin Security 🌐  \033[1;34m←\033[0m"
+  echo -e "\033[1;34m    → \033[1;33m⚔️ AidenGuard Firewall Manager ⚔️ \033[1;34m←\033[0m"
+  echo -e "\033[1;34m    ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←\033[0m\n"
+}
 echo -e "\e[1;33m1) Install Firewall\e[0m"
 echo -e "\e[1;33m2) Add New Port\e[0m"
 echo -e "\e[1;33m3) Remove Port\e[0m"
