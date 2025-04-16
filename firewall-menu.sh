@@ -20,7 +20,8 @@ echo -e "\e[1;33m5) Update IP Blacklist Range\e[0m"
 echo -e "\e[1;33m6) Show IP Blacklist\e[0m"
 echo -e "\e[1;33m7) Show Firewall Rules\e[0m"
 echo -e "\e[1;33m8) Show Open Ports\e[0m"
-echo -e "\e[1;33m9) Exit\e[0m"
+echo -e "\e[1;33m9) Our Telegram Channel\e[0m"
+echo -e "\e[1;33m10) Exit\e[0m"
 echo "==============================================="
 read -p "🔢 Select an option: " option
 
@@ -62,14 +63,17 @@ case $option in
     ipset list blacklist_subnet
     ;;
   7)
-    echo -e "\n\e[1;36m📋 Current Firewall Rules:\e[0m"
+    echo -e "\n\e[1;36m🔥 Firewall Rules:\e[0m"
     iptables -L -n --line-numbers
     ;;
   8)
-    echo -e "\n\e[1;36m🌐 Current Open Ports (Listening):\e[0m"
+    echo -e "\n\e[1;36m🔎 Open Ports (listening):\e[0m"
     ss -tulpn
     ;;
   9)
+    echo -e "\n\e[1;36m🌐 Our Telegram Channel:\e[0m https://t.me/iimawtin"
+    ;;
+  10)
     echo -e "\e[1;36m👋 Bye!\e[0m"
     exit 0
     ;;
