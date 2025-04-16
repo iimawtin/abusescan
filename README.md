@@ -1,127 +1,120 @@
-# AidenGuard Firewall Automation (abusescan)
+# اتومات فایروال AidenGuard (abusescan)
 
-**Author:** iimawtin  
-**Repository:** https://github.com/iimawtin/abusescan  
-
----
-
-## 📖 Overview
-This project provides a set of Bash scripts to **automate** the installation, configuration, and management of a hardened firewall on Linux servers. Key features include:
-
-- **Automated installation** of `iptables`, `ipset`, and persistence tools.
-- **Dynamic IP blacklist** fetched from GitHub (`update-blacklist.sh`).
-- **Menu-driven management** (`firewall-menu.sh`) for easy operations:
-  1. Install Firewall
-  2. Add New Port
-  3. Remove Port
-  4. Disable Firewall
-  5. Update IP Blacklist Range
-  6. Show IP Blacklist
-  7. Show Firewall Rules
-  8. Show Open Ports (listening + user-defined)
-  9. Our Telegram Channel
-  10. Exit
-- **Real-time monitoring** script (`firewall-monitor.sh`) that:
-  - Parses `/var/log/syslog` for scan or login attempts.
-  - Automatically blocks offending IPs/subnets via `ipset`.
-  - Sends alerts to your Telegram using Bot API.
-- **Customizable banner** with ASCII art and colors.
-- **Built-in log rotation** for `/var/log/firewall.log`.
+**نویسنده:** iimawtin  
+**ریپو:** https://github.com/iimawtin/abusescan  
 
 ---
 
-## 🛠️ Files and Structure
+## 📖 مرور کلی
+این پروژه مجموعه‌ای از اسکریپت‌های **Bash** را فراهم می‌کند تا نصب، پیکربندی و مدیریت یک فایروال امن را در سرورهای لینوکس به‌صورت خودکار انجام دهد. ویژگی‌های کلیدی:
 
+- نصب خودکار `iptables`، `ipset` و ابزارهای نگهداری قوانین (`iptables-persistent`).
+- **لیست سیاه پویا** از IPها که از GitHub گرفته می‌شود (`update-blacklist.sh`).
+- **منوی تعاملی** (`firewall-menu.sh`) برای انجام سریع عملیات:
+  1. نصب فایروال
+  2. افزودن پورت جدید
+  3. حذف پورت
+  4. غیرفعال‌سازی فایروال
+  5. به‌روزرسانی لیست سیاه IP
+  6. نمایش لیست سیاه IP
+  7. نمایش قوانین فایروال
+  8. نمایش پورت‌های باز (درحال شنود + پورت‌های تعریف‌شده توسط کاربر)
+  9. کانال تلگرام ما
+  10. خروج
+- **اسکریپت مانیتورینگ** (`firewall-monitor.sh`) که:
+  - لاگ‌های `/var/log/syslog` را برای اسکن یا تلاش‌های ناموفق لاگین بررسی می‌کند.
+  - آی‌پی‌های متخلف را خودکار با `ipset` مسدود می‌کند.
+  - هشدار‌ها را از طریق ربات تلگرام ارسال می‌کند.
+- **بنر قابل سفارشی‌سازی** با ASCII art و رنگ.
+- **لاگ‌روتیت** خودکار برای `/var/log/firewall.log`.
+
+---
+
+## 🛠️ فایل‌ها و ساختار
 ```
 abusescan/
-├── INSTALL-ANTISCAN.SH      # Main installer script (install-antiscan.sh)
-├── UPDATE-BLACKLIST.SH      # Static IP blacklist ranges updater
-├── FIREWALL-MENU.SH         # Interactive menu for firewall management
-├── FIREWALL-MONITOR.SH      # Log watcher & auto-block script
-├── FIREWALL-LOG-WATCHER.SH  # Cron wrapper to invoke monitor
-└── README.md                # This documentation
-```
+├── install-antiscan.sh      # اسکریپت اصلی نصب و پیکربندی
+├── update-blacklist.sh      # به‌روزرسان لیست سیاه IP
+├── firewall-menu.sh         # منوی تعاملی مدیریت فایروال
+├── firewall-monitor.sh      # اسکریپت مانیتورینگ و مسدودسازی خودکار
+├── firewall-log-watcher.sh  # فراخواننده cron برای مانیتورینگ
+└── README.md                # مستندات (انگلیسی)
+```  
 
 ### 1. `install-antiscan.sh`
-- **Installs**: `iptables`, `ipset`, `iptables-persistent`, `curl`.  
-- **Configures**:
-  - DNS (`/etc/resolv.conf` → `8.8.8.8`, `4.2.2.4`).  
-  - `logrotate` for `/var/log/firewall.log`.  
-- **Fetches** latest `update-blacklist.sh` from GitHub and applies it.  
-- **Applies** default firewall policies:
-  - DROP all incoming by default, allow established & ICMP.  
-  - Opens user-defined + internal service ports.  
-  - Drops all traffic from blacklisted IPs/subnets.
-- **Schedules** `firewall-log-watcher.sh` via cron every 10 minutes.
-- **Sends** a Telegram notification when initialization completes.
+- نصب بسته‌ها: `iptables`، `ipset`، `iptables-persistent`، `curl`  
+- پیکربندی DNS (`/etc/resolv.conf`) و `logrotate`  
+- دریافت و اجرای آخرین `update-blacklist.sh`  
+- اعمال سیاست‌های پیش‌فرض فایروال و باز کردن پورت‌ها  
+- زمان‌بندی اسکریپت مانیتورینگ در cron هر ۱۰ دقیقه  
+- ارسال پیام تأیید به تلگرام
 
 ### 2. `update-blacklist.sh`
-- Defines two `ipset` sets: `blacklist` and `blacklist_subnet`.  
-- Populates them with a curated list of known private, reserved, or abuse-prone IP ranges.  
-- Can be updated independently in GitHub; installer always pulls the latest.
+- ساخت دو مجموعه `ipset` به نام‌های `blacklist` و `blacklist_subnet`  
+- پر کردن آن‌ها با رنج‌های IP خصوصی، رزروشده و سوءاستفاده‌خیز  
+- قابل به‌روزرسانی مستقل در GitHub
 
 ### 3. `firewall-menu.sh`
-- Provides an **interactive TUI** for common operations without editing scripts:
-  1. **Install Firewall** → runs `install-antiscan.sh`.
-  2. **Add/Remove Port** → updates `iptables` + persists.
-  3. **Disable Firewall** → flushes and accepts all.
-  4. **Update IP Blacklist** → fetches & runs `update-blacklist.sh`.
-  5. **Show IP Blacklist** → lists both `blacklist` and `blacklist_subnet`.
-  6. **Show Firewall Rules** → `iptables -L -n --line-numbers`.
-  7. **Show Open Ports** → `ss -tulpn` + user-defined open ports parsed from `iptables`.
-  8. **Our Telegram Channel** → displays link: `t.me/iimawtin`.
-  9. **Exit**.
+- منوی TUI برای:
+  1. نصب فایروال
+  2. افزودن/حذف پورت
+  3. غیرفعال‌سازی فایروال
+  4. به‌روزرسانی لیست سیاه
+  5. نمایش لیست سیاه
+  6. نمایش قوانین فایروال
+  7. نمایش پورت‌های باز
+  8. نمایش لینک کانال تلگرام
+  9. خروج
 
-### 4. `firewall-monitor.sh` & `firewall-log-watcher.sh`
-- **Monitor** scans and login failures in `/var/log/syslog`.  
-- **Blocks** offending IPs via `ipset add blacklist` and corresponding `/24` subnet in `blacklist_subnet`.  
-- **Logs** blocks to `/var/log/firewall.log`.  
-- **Alerts** via Telegram Bot (hidden in console).  
+### 4. `firewall-monitor.sh` و `firewall-log-watcher.sh`
+- تجزیه لاگ‌ها برای یافتن اسکن یا تلاش‌های ناموفق  
+- مسدودسازی خودکار آی‌پی‌ها و زیرشبکه‌ها  
+- گزارش در `/var/log/firewall.log`  
+- ارسال هشدار به تلگرام (بدون نمایش در کنسول)
 
 ---
 
-## 🚀 Quick Start
+## 🚀 شروع سریع
 
-1. **Clone the repo**:
+1. **کلون ریپو**:
    ```bash
    git clone https://github.com/iimawtin/abusescan.git
    cd abusescan
    ```
 
-2. **Run the menu** (no install needed):
+2. **اجرای منو**:
    ```bash
    bash firewall-menu.sh
    ```
 
-3. **Or** directly install via curl:
+3. **یا نصب مستقیم**:
    ```bash
    bash <(curl -fsSL https://raw.githubusercontent.com/iimawtin/abusescan/main/install-antiscan.sh)
    ```
 
-4. **Follow prompts** for Telegram Token, Chat ID, and allowed ports.
+4. **ورود اطلاعات**: توکن ربات تلگرام، چت آیدی و پورت‌های مجاز
 
 ---
 
-## 📡 Telegram Integration
-- Create a Bot via [@BotFather](https://t.me/BotFather) and obtain **API Token**.  
-- Get your **Chat ID** (e.g., via [@get_id_bot](https://t.me/get_id_bot)).  
-- Enter both when prompted by installer.  
-- Alerts & setup confirmation will be sent to your chat.
+## 📡 ادغام با تلگرام
+1. ساخت ربات در [@BotFather](https://t.me/BotFather) و دریافت توکن
+2. دریافت Chat ID (مثلاً از [@get_id_bot](https://t.me/get_id_bot))
+3. هنگام نصب وارد کن تا اعلان‌ها دریافت شود.
 
 ---
 
-## ⚙️ Customization
-- **Ports**: edit `INTERNAL_ALLOWED_PORTS` in `install-antiscan.sh`.  
-- **Blacklist**: update `update-blacklist.sh` ranges.  
-- **Cron frequency**: modify `/etc/cron.d/firewall-logger`.  
-- **Banner**: adjust ASCII art in `firewall-menu.sh`.
+## ⚙️ سفارشی‌سازی
+- **پورت‌ها**: متغیر `INTERNAL_ALLOWED_PORTS` در `install-antiscan.sh`
+- **لیست سیاه**: ویرایش `update-blacklist.sh`
+- **محدوده cron**: فایل `/etc/cron.d/firewall-logger`
+- **بنر**: تابع `banner` در `firewall-menu.sh`
 
 ---
 
-## 📝 License
+## 📝 مجوز
 MIT © iimawtin
 
 ---
 
-*Stay secure and informed — AidenGuard by iimawtin*
+*با AidenGuard امن‌تر باش!*
 
