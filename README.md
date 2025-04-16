@@ -1,4 +1,4 @@
-# اتومات فایروال AidenGuard (abusescan)
+# فایروال اتومات AidenGuard (abusescan)
 
 **نویسنده:** iimawtin  
 **ریپو:** https://github.com/iimawtin/abusescan  
