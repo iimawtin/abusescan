@@ -4,7 +4,7 @@ echo -e "\e[1;34m🔐 Start installing and configuring advanced security...\e[0m
 
 # بررسی دسترسی روت
 if [[ $EUID -ne 0 ]]; then
-  echo -e "\e[1;31mاین اسکریپت باید با دسترسی root اجرا شود!\e[0m"
+  echo -e "\e[1;31mThis script must be run with root access.!\e[0m"
   exit 1
 fi
 
@@ -37,10 +37,10 @@ chown root:adm /var/log/firewall.log
 echo -e "nameserver 8.8.8.8\nnameserver 4.2.2.4" > /etc/resolv.conf
 
 # اطلاعات از کاربر
-read -p "🔐 توکن تلگرام: " TELEGRAM_TOKEN
-read -p "📨 چت آیدی: " CHAT_ID
-read -p "📡 پورت‌های مجاز (مثلا: 22 443 9090): " PORTS
-read -p "آیا می‌خواهی فایروال رو غیرفعال کنی؟ (yes/no): " DISABLE
+read -p "🔐 Telegram Token: " TELEGRAM_TOKEN
+read -p "📨 Chat ID: " CHAT_ID
+read -p "📡 Allowed ports (example: 22 443 9090): " PORTS
+read -p "Do you want to disable the firewall? (yes/no): " DISABLE
 
 if [[ $DISABLE == "yes" ]]; then
   iptables -F
@@ -158,4 +158,4 @@ curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage" \
      -d chat_id=$CHAT_ID \
      -d text="🛡️  فایروال کیری قویه AidenGuard با لاگ‌گیری و بلاک خودکار آی‌پی‌های مشکوک راه‌اندازی شد. در سرور $HOSTNAME"
 
-echo -e "\e[1;32m📄 اسکریپت فایروال با موفقیت اجرا شد.\e[0m"
+echo -e "\e[1;32m📄 The firewall script ran successfully.\e[0m"
