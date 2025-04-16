@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo -e "\e[1;34m🔐 شروع نصب و پیکربندی امنیتی پیشرفته...\e[0m"
+echo -e "\e[1;34m🔐 Start installing and configuring advanced security...\e[0m"
 
 # بررسی دسترسی روت
 if [[ $EUID -ne 0 ]]; then
