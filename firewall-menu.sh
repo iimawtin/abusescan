@@ -88,9 +88,20 @@ case $option in
     iptables -L -n --line-numbers
     ;;
   8)
-    echo -e "\n\e[1;36m🔍 Open Ports (listening):\e[0m"
+    echo -e "\n\e[1;36m🔎 Open Listening Ports:\e[0m"
     ss -tulpn
-    ;;
+
+    echo -e "\n\e[1;36m🔑 User-defined open ports:\e[0m"
+  # لیست کردن پورت‌های ACCEPT شده در INPUT chain
+    iptables -L INPUT -n | \
+    grep 'ACCEPT' | \
+    grep 'dpt:' | \
+    awk -F 'dpt:' '{print $2}' | \
+    awk '{print $1}' | \
+    sort -n | uniq | \
+    xargs echo
+  echo
+  ;;
   9)
     echo -e "\n\e[1;36m🌐 Our Telegram Channel:\e[0m https://t.me/iimawtin"
     ;;
