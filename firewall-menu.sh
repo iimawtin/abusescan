@@ -12,8 +12,9 @@ echo -e "\e[1;33m1) Install Firewall\e[0m"
 echo -e "\e[1;33m2) Add New Port\e[0m"
 echo -e "\e[1;33m3) Remove Port\e[0m"
 echo -e "\e[1;33m4) Disable Firewall\e[0m"
-echo -e "\e[1;33m5) Exit\e[0m"
-echo -e "\e[1;33m6) Update IP Blacklist Range\e[0m"
+echo -e "\e[1;33m5) Update IP Blacklist Range\e[0m"
+echo -e "\e[1;33m6) Show IP Blacklist\e[0m"
+echo -e "\e[1;33m7) Exit\e[0m"
 echo "==============================================="
 read -p "🔢 Select an option: " option
 
@@ -45,16 +46,25 @@ case $option in
     iptables -P OUTPUT ACCEPT
     echo -e "\e[1;31m🚫 Firewall disabled.\e[0m"
     ;;
-  5)
+  7)
     echo -e "\e[1;36m👋 Bye!\e[0m"
     exit 0
     ;;
-  6)
+  5)
     echo -e "\e[1;36m📥 Updating IP blacklist from GitHub...\e[0m"
-    curl -o /usr/local/bin/update-blacklist.sh https://raw.githubusercontent.com/iimawtin/abusescan/main/update-blacklist.sh \
-    && chmod +x /usr/local/bin/update-blacklist.sh \
-    && bash /usr/local/bin/update-blacklist.sh
+    curl -o /usr/local/bin/update-blacklist.sh \
+      https://raw.githubusercontent.com/iimawtin/abusescan/main/update-blacklist.sh \
+      && chmod +x /usr/local/bin/update-blacklist.sh \
+      && bash /usr/local/bin/update-blacklist.sh
     echo -e "\e[1;32m✅ IP blacklist updated.\e[0m"
+    ;;
+  6)
+    echo -e "\n\e[1;36m📄 Current IP Blacklist Ranges:\e[0m"
+    ipset list blacklist | sed -n '1,5p'
+    echo -e "\n\e[1;36m┈┈┈┈┈┈┈┈┈┈┈┈┈┈\e[0m"
+    ipset list blacklist | sed -n '6,200p'
+    echo -e "\n\e[1;36m📄 Current Subnet Blacklist Ranges:\e[0m"
+    ipset list blacklist_subnet
     ;;
   *)
     echo -e "\e[1;31m❌ Invalid option.\e[0m"
