@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 clear
@@ -8,6 +7,8 @@ banner() {
   echo -e "\033[1;34m    → \033[1;33m⚔️ AidenGuard Firewall Manager ⚔️ \033[1;34m←\033[0m"
   echo -e "\033[1;34m    ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←\033[0m\n"
 }
+banner
+
 echo -e "\e[1;33m1) Install Firewall\e[0m"
 echo -e "\e[1;33m2) Add New Port\e[0m"
 echo -e "\e[1;33m3) Remove Port\e[0m"
@@ -37,34 +38,27 @@ case $option in
     echo -e "\e[1;31m❌ Port $port removed.\e[0m"
     ;;
   4)
-    iptables -F
-    iptables -X
-    iptables -t nat -F
-    iptables -t nat -X
-    iptables -P INPUT ACCEPT
-    iptables -P FORWARD ACCEPT
-    iptables -P OUTPUT ACCEPT
+    iptables -F; iptables -X; iptables -t nat -F; iptables -t nat -X
+    iptables -P INPUT ACCEPT; iptables -P FORWARD ACCEPT; iptables -P OUTPUT ACCEPT
     echo -e "\e[1;31m🚫 Firewall disabled.\e[0m"
-    ;;
-  7)
-    echo -e "\e[1;36m👋 Bye!\e[0m"
-    exit 0
     ;;
   5)
     echo -e "\e[1;36m📥 Updating IP blacklist from GitHub...\e[0m"
     curl -o /usr/local/bin/update-blacklist.sh \
-      https://raw.githubusercontent.com/iimawtin/abusescan/main/update-blacklist.sh \
+         https://raw.githubusercontent.com/iimawtin/abusescan/main/update-blacklist.sh \
       && chmod +x /usr/local/bin/update-blacklist.sh \
       && bash /usr/local/bin/update-blacklist.sh
     echo -e "\e[1;32m✅ IP blacklist updated.\e[0m"
     ;;
   6)
     echo -e "\n\e[1;36m📄 Current IP Blacklist Ranges:\e[0m"
-    ipset list blacklist | sed -n '1,5p'
-    echo -e "\n\e[1;36m┈┈┈┈┈┈┈┈┈┈┈┈┈┈\e[0m"
-    ipset list blacklist | sed -n '6,200p'
+    ipset list blacklist
     echo -e "\n\e[1;36m📄 Current Subnet Blacklist Ranges:\e[0m"
     ipset list blacklist_subnet
+    ;;
+  7)
+    echo -e "\e[1;36m👋 Bye!\e[0m"
+    exit 0
     ;;
   *)
     echo -e "\e[1;31m❌ Invalid option.\e[0m"
