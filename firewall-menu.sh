@@ -2,8 +2,7 @@
 
 clear
 banner() {
-  # ASCII art header
-  cat <<'EOF'
+cat <<'EOF'
 /**
 * >>==================================================================================<<
 * ||                                                                                  ||
@@ -25,6 +24,9 @@ EOF
   printf "\033[1;34m    → \033[1;32m🌐 iimawtin Security 🌐  \033[1;34m←\033[0m\n"
   printf "\033[1;34m    → \033[1;33m⚔️ AidenGuard Firewall Manager ⚔️ \033[1;34m←\033[0m\n"
   printf "\033[1;34m    ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←\033[0m\n\n"
+
+  # Telegram channel line
+  printf "\033[1;36m🌐 Our Telegram Channel:\033[0m https://t.me/iimawtin\n\n"
 }
 
 # نمایش بنر
