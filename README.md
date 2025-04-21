@@ -89,7 +89,7 @@ abusescan/
 
 3. **یا نصب مستقیم**:
    ```bash
-   bash <(curl -fsSL https://raw.githubusercontent.com/iimawtin/abusescan/main/install-antiscan.sh)
+   bash <(curl -fsSL https://raw.githubusercontent.com/iimawtin/abusescan/main/firewall-menu.sh)
    ```
 
 4. **ورود اطلاعات**: توکن ربات تلگرام، چت آیدی و پورت‌های مجاز
