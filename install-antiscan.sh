@@ -100,6 +100,19 @@ iptables -A FORWARD -p udp --dport 53 -j ACCEPT
 iptables -A FORWARD -p udp --dport 443 -j ACCEPT
 iptables -A FORWARD -j DROP
 
+# محدودسازی سخت UDP (تمام UDP غیرمجاز محدود و بلاک می‌شن)
+iptables -A INPUT -p udp -m limit --limit 10/second --limit-burst 20 -j ACCEPT
+iptables -A INPUT -p udp -j DROP
+
+iptables -A INPUT -p udp -m length --length 0:512 -j ACCEPT
+iptables -A INPUT -p udp -j DROP
+
+iptables -A INPUT -p udp -m recent --name UDPSCAN --rcheck --seconds 10 --hitcount 3 -j DROP
+iptables -A INPUT -p udp -m recent --name UDPSCAN --set -j ACCEPT
+
+iptables -A INPUT -p udp --dport 16658 -j DROP
+iptables -A INPUT -p udp --dport 5564 -j DROP
+
 # ذخیره قوانین
 netfilter-persistent save >/dev/null 2>&1
 
@@ -116,8 +129,9 @@ EOF
 chmod +x /usr/local/bin/firewall-log-watcher.sh
 
 # اسکریپت مانیتورینگ
-cat << 'EOF' >/usr/local/bin/firewall-monitor.sh
+cat << 'EOF' > /usr/local/bin/firewall-monitor.sh
 #!/bin/bash
+
 LOGFILE="/var/log/syslog"
 TMPFILE="/tmp/firewall-scan.tmp"
 IPSET_BLOCK="blacklist"
@@ -126,7 +140,11 @@ HOSTNAME=$(hostname)
 TOKEN="__TOKEN__"
 CHAT_ID="__CHATID__"
 
-grep -E "Failed password|scan" $LOGFILE | awk '{print $(NF-3)}' | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}' > $TMPFILE
+# استخراج آی‌پی‌هایی که دارای الگوی SRC= هستند یا لاگ‌های SSH فیل شده
+grep -E "Failed password|scan" $LOGFILE \
+  | grep -oE 'SRC=([0-9]{1,3}\.){3}[0-9]{1,3}' \
+  | cut -d= -f2 > $TMPFILE
+
 for ip in $(sort $TMPFILE | uniq); do
   if ! ipset test $IPSET_BLOCK $ip &>/dev/null; then
     ipset add $IPSET_BLOCK $ip
@@ -134,10 +152,11 @@ for ip in $(sort $TMPFILE | uniq); do
     ipset add $IPSET_SUBNET_BLOCK $subnet
     echo "$(date) - Blocked IP: $ip from $HOSTNAME" >> /var/log/firewall.log
     curl -s -X POST "https://api.telegram.org/bot$TOKEN/sendMessage" \
-      -d "chat_id=$CHAT_ID&text=🚨 آی‌پی $ip در سرور $HOSTNAME مادرش گاییده شد." >/dev/null 2>&1
+      -d "chat_id=$CHAT_ID&text=🚨 آی‌پی $ip در سرور $HOSTNAME بلاک شد." > /dev/null 2>&1
   fi
 done
 EOF
+
 chmod +x /usr/local/bin/firewall-monitor.sh
 
 # جایگزینی مقادیر واقعی
