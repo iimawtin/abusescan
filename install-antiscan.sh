@@ -74,6 +74,8 @@ else
   echo -e "\e[1;31m⚠️ IPv4 Tunnel IP not found on $INTERFACE_NAME.\e[0m"
 fi
 
+ip6tables -A OUTPUT -p udp --dport 10000:65535 -s 2a05:cd00::1 -j ACCEPT
+
 # بلاک پورت‌های مشکوک در IPv4
 iptables -A OUTPUT -p udp --dport 5564 -j DROP
 iptables -A OUTPUT -p udp --dport 16658 -j DROP
