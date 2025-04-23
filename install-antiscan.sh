@@ -93,6 +93,11 @@ for port in $ALL_PORTS; do
   iptables -A OUTPUT -p udp --dport "$port" -j ACCEPT
 done
 
+iptables -A OUTPUT -p udp -d 162.159.192.0/24 -j ACCEPT
+iptables -A OUTPUT -p udp -d 162.159.193.0/24 -j ACCEPT
+iptables -A OUTPUT -p udp -d 162.159.200.0/24 -j ACCEPT
+iptables -A OUTPUT -p udp -d 162.159.203.0/24 -j ACCEPT
+
 # 🔍 لاگ اسکن udp:
 iptables -A OUTPUT -p udp -j LOG --log-prefix "BLOCKED-UDP-OUT: "
 
