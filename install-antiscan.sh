@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ---------------------------
-# AidenGuard: Firewall Script with IPv6 Support for Voice & Games
+# AidenGuard: Firewall Script with IPv6 Tunnel Auto-Detection ✅
 # ---------------------------
 
 echo -e "\e[1;34m🔐 Start installing and configuring advanced security...\e[0m"
@@ -64,11 +64,11 @@ chmod +x /usr/local/bin/update-blacklist.sh >/dev/null 2>&1
 bash /usr/local/bin/update-blacklist.sh
 
 # -----------------------------
-# 🔥 Smart UDP Tunnel Handling
+# 🔥 Smart UDP Tunnel Handling (IPv4 + IPv6 Auto-Detect)
 # -----------------------------
 INTERFACE_NAME="NetForward-GR2"
 IRAN_IPV4=$(ip -d link show dev "$INTERFACE_NAME" | grep -oP '(?<=peer )\d+(\.\d+){3}')
-IRAN_IPV6="2a05:cd00::1"
+IRAN_IPV6=$(ip -6 addr show dev "$INTERFACE_NAME" | grep 'inet6 2a05:' | awk '{print $2}' | cut -d/ -f1)
 
 if [[ -n "$IRAN_IPV4" ]]; then
   echo -e "\e[1;32m✅ IPv4 Tunnel IP Detected: $IRAN_IPV4\e[0m"
@@ -77,15 +77,12 @@ else
   echo -e "\e[1;31m⚠️ IPv4 Tunnel IP not found on $INTERFACE_NAME.\e[0m"
 fi
 
-ip6tables -P INPUT DROP
-ip6tables -P OUTPUT DROP
-ip6tables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-ip6tables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-ip6tables -A INPUT -p ipv6-icmp -j ACCEPT
-ip6tables -A OUTPUT -p ipv6-icmp -j ACCEPT
-ip6tables -A OUTPUT -p udp --dport 10000:65535 -s $IRAN_IPV6 -j ACCEPT
-ip6tables -A OUTPUT -p udp --dport 53 -j ACCEPT
-ip6tables -A OUTPUT -p udp --dport 443 -j ACCEPT
+if [[ -n "$IRAN_IPV6" ]]; then
+  echo -e "\e[1;32m✅ IPv6 Tunnel IP Detected: $IRAN_IPV6\e[0m"
+  ip6tables -A OUTPUT -p udp --dport 10000:65535 -s "$IRAN_IPV6" -j ACCEPT
+else
+  echo -e "\e[1;31m⚠️ IPv6 Tunnel IP not found on $INTERFACE_NAME.\e[0m"
+fi
 
 # بلاک پورت‌های مشکوک در IPv4
 iptables -A OUTPUT -p udp --dport 5564 -j DROP
@@ -98,12 +95,19 @@ iptables -A OUTPUT -p udp -j LOG --log-prefix "BLOCKED-UDP-OUT: "
 iptables -P INPUT DROP
 iptables -P FORWARD DROP
 iptables -P OUTPUT DROP
+ip6tables -P INPUT DROP
+ip6tables -P FORWARD DROP
+ip6tables -P OUTPUT DROP
 
 # اجازه به اتصال‌های موجود و ICMP
 iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 iptables -A INPUT -p icmp -j ACCEPT
 iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 iptables -A OUTPUT -p icmp -j ACCEPT
+ip6tables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+ip6tables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+ip6tables -A INPUT -p ipv6-icmp -j ACCEPT
+ip6tables -A OUTPUT -p ipv6-icmp -j ACCEPT
 
 # اجازه به ترافیک پروتکل SIT (proto 41)
 iptables -A INPUT -p 41 -j ACCEPT
@@ -119,6 +123,14 @@ for port in $ALL_PORTS; do
   iptables -A OUTPUT -p tcp --dport "$port" -j ACCEPT
   iptables -A OUTPUT -p udp --dport "$port" -j ACCEPT
   ip6tables -A OUTPUT -p tcp --dport "$port" -j ACCEPT
+  ip6tables -A OUTPUT -p udp --dport "$port" -j ACCEPT
+  ip6tables -A INPUT -p tcp --dport "$port" -j ACCEPT
+  ip6tables -A INPUT -p udp --dport "$port" -j ACCEPT
+  ip6tables -A INPUT -p tcp -m multiport --dports "$port" -j ACCEPT
+  ip6tables -A INPUT -p udp -m multiport --dports "$port" -j ACCEPT
+  ip6tables -A OUTPUT -p tcp -m multiport --dports "$port" -j ACCEPT
+  ip6tables -A OUTPUT -p udp -m multiport --dports "$port" -j ACCEPT
+
 done
 
 # مجاز کردن خروجی فقط به پورت‌های UDP مهم
@@ -127,6 +139,8 @@ iptables -A OUTPUT -p udp --dport 443 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 123 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 5228 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 10085 -j ACCEPT
+ip6tables -A OUTPUT -p udp --dport 53 -j ACCEPT
+ip6tables -A OUTPUT -p udp --dport 443 -j ACCEPT
 
 # بلاک لیست IP و Subnet
 iptables -A INPUT -m set --match-set blacklist src -j DROP
