@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ---------------------------
-# AidenGuard: Firewall Script with Dynamic Tunnel IP Detection
+# AidenGuard: Firewall Script Cleaned (No ip6tables)
 # ---------------------------
 
 echo -e "\e[1;34m🔐 Start installing and configuring advanced security...\e[0m"
@@ -46,15 +46,13 @@ read -p "📨 Chat ID: " CHAT_ID
 read -p "📡 Allowed ports (example: 22 443 9090): " PORTS
 
 # نصب ابزارها
-apt-get install -y iptables ipset iproute2 ip6tables curl >/dev/null 2>&1
+apt-get install -y iptables ipset iproute2 curl >/dev/null 2>&1
 
 # پاکسازی قوانین قبلی
 iptables -F
 iptables -X
 iptables -t nat -F
 iptables -t nat -X
-ip6tables -F
-ip6tables -X
 ipset flush
 
 # دریافت و اجرای به‌روز‌رسانی لیست سیاه
@@ -64,11 +62,10 @@ chmod +x /usr/local/bin/update-blacklist.sh >/dev/null 2>&1
 bash /usr/local/bin/update-blacklist.sh
 
 # -----------------------------
-# 🔥 Smart UDP Tunnel Handling (IPv4 & IPv6)
+# 🔥 Smart UDP Tunnel Handling (Only IPv4)
 # -----------------------------
 INTERFACE_NAME="NetForward-GR2"
 IRAN_IPV4=$(ip -d link show dev "$INTERFACE_NAME" | grep -oP '(?<=peer )\d+(\.\d+){3}')
-IRAN_IPV6="2a05:cd00::1"
 
 if [[ -n "$IRAN_IPV4" ]]; then
   echo -e "\e[1;32m✅ IPv4 Tunnel IP Detected: $IRAN_IPV4\e[0m"
@@ -77,20 +74,12 @@ else
   echo -e "\e[1;31m⚠️ IPv4 Tunnel IP not found on $INTERFACE_NAME.\e[0m"
 fi
 
-# IPv6 ثابت برای ترافیک صوتی از ایران
-ip6tables -A OUTPUT -p udp --dport 10000:65535 -s "$IRAN_IPV6" -j ACCEPT
-
-# بلاک پورت‌های مشکوک در هر دو نسخه IP
+# بلاک پورت‌های مشکوک در IPv4
 iptables -A OUTPUT -p udp --dport 5564 -j DROP
 iptables -A OUTPUT -p udp --dport 16658 -j DROP
-ip6tables -A OUTPUT -p udp --dport 5564 -j DROP
-ip6tables -A OUTPUT -p udp --dport 16658 -j DROP
 
-# لاگ‌گیری برای UDPهای بلاک‌شده
+# لاگ‌گیری برای UDPهای بلاک‌شده در IPv4
 iptables -A OUTPUT -p udp -j LOG --log-prefix "BLOCKED-UDP-OUT: "
-ip6tables -A OUTPUT -p udp -j LOG --log-prefix "BLOCKED6-UDP-OUT: "
-
-# ادامه قوانین فایروال...
 
 # قوانین پیش‌فرض
 iptables -P INPUT DROP
@@ -102,17 +91,11 @@ iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 iptables -A INPUT -p icmp -j ACCEPT
 iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 iptables -A OUTPUT -p icmp -j ACCEPT
-ip6tables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-ip6tables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-ip6tables -A INPUT -p ipv6-icmp -j ACCEPT
-ip6tables -A OUTPUT -p ipv6-icmp -j ACCEPT
-
-ip6tables -A OUTPUT -p tcp --dport 443 -j ACCEPT
 
 # اجازه به ترافیک پروتکل SIT (proto 41)
 iptables -A INPUT -p 41 -j ACCEPT     # برای SIT tunnel ورودی
 iptables -A OUTPUT -p 41 -j ACCEPT    # برای ترافیک خروجی تونل
-iptables -A FORWARD -p 41 -j ACCEPT   # اگر ترافیک از روی سرور عبور می‌کنه (روتینگ)
+iptables -A FORWARD -p 41 -j ACCEPT   # اگر ترافیک از روی سرور عبور می‌کند
 
 # باز کردن پورت‌ها روی INPUT
 INTERNAL_ALLOWED_PORTS="22 62789 8443 8080 3306 80 53 5228 443 123 10085"
@@ -120,6 +103,8 @@ ALL_PORTS=$(echo "$PORTS $INTERNAL_ALLOWED_PORTS" | tr ' ' '\n' | sort -u | tr '
 for port in $ALL_PORTS; do
   iptables -A INPUT -p tcp --dport "$port" -j ACCEPT
   iptables -A INPUT -p udp --dport "$port" -j ACCEPT
+  iptables -A OUTPUT -p tcp --dport "$port" -j ACCEPT
+  iptables -A OUTPUT -p udp --dport "$port" -j ACCEPT
 done
 
 # مجاز کردن خروجی فقط به پورت‌های UDP مهم
@@ -129,27 +114,15 @@ iptables -A OUTPUT -p udp --dport 123 -j ACCEPT    # NTP
 iptables -A OUTPUT -p udp --dport 5228 -j ACCEPT   # Google Play Services
 iptables -A OUTPUT -p udp --dport 10085 -j ACCEPT  # Xray outbound UDP
 
-for port in $ALL_PORTS; do
-  iptables -A OUTPUT -p tcp --dport "$port" -j ACCEPT
-  iptables -A OUTPUT -p udp --dport "$port" -j ACCEPT
-done
-
-# 🔍 لاگ اسکن udp:
-iptables -A OUTPUT -p udp -j LOG --log-prefix "BLOCKED-UDP-OUT: "
-
 # بلاک لیست IP و Subnet
 iptables -A INPUT -m set --match-set blacklist src -j DROP
 iptables -A INPUT -m set --match-set blacklist_subnet src -j DROP
 
 # قوانین ضد اسکن
 iptables -A INPUT -p tcp --tcp-flags ALL NONE -j LOG --log-prefix "NULL scan: "
-ip6tables -A INPUT -p tcp --tcp-flags ALL NONE -j DROP
 iptables -A INPUT -p tcp --tcp-flags ALL FIN,PSH,URG -j LOG --log-prefix "XMAS scan: "
-ip6tables -A INPUT -p tcp --tcp-flags ALL FIN,PSH,URG -j DROP
 iptables -A INPUT -p tcp --tcp-flags ALL FIN -j LOG --log-prefix "FIN scan: "
-ip6tables -A INPUT -p tcp --tcp-flags ALL FIN -j DROP
 iptables -A INPUT -p tcp --tcp-flags SYN,FIN SYN,FIN -j LOG --log-prefix "SYN/FIN scan: "
-ip6tables -A INPUT -p tcp --tcp-flags SYN,FIN SYN,FIN -j DROP
 
 # محدودسازی ترافیک داخلی در FORWARD
 iptables -A FORWARD -i eth0 -s 10.0.0.0/8 -d 10.0.0.0/8 -j DROP
@@ -174,7 +147,6 @@ iptables -A INPUT -p udp -m limit --limit 10/second --limit-burst 20 -j ACCEPT
 
 # باقی UDPها بلاک
 iptables -A INPUT -p udp -j DROP
-
 iptables -A INPUT -p udp --dport 16658 -j DROP
 iptables -A INPUT -p udp --dport 5564 -j DROP
 
