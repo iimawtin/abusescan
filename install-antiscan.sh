@@ -65,7 +65,7 @@ bash /usr/local/bin/update-blacklist.sh
 # 🔥 Smart UDP Tunnel Handling (Discord / Steam)
 # -----------------------------
 INTERFACE_NAME="NetForward-GR2"
-IRAN_IP=$(ip -4 addr show dev "$INTERFACE_NAME" | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
+IRAN_IP=$(ip -d link show dev NetForward-GR2 | grep -oP '(?<=peer )\d+(\.\d+){3}')
 
 if [[ -n "$IRAN_IP" ]]; then
   echo -e "\e[1;32m✅ Iranian Tunnel IP Detected: $IRAN_IP\e[0m"
