@@ -83,6 +83,9 @@ iptables -A OUTPUT -p udp --dport 123 -j ACCEPT    # NTP
 iptables -A OUTPUT -p udp --dport 5228 -j ACCEPT   # Google Play Services
 iptables -A OUTPUT -p udp --dport 10085 -j ACCEPT  # Xray outbound UDP
 
+# 🔍 لاگ اسکن udp:
+iptables -A OUTPUT -p udp -j LOG --log-prefix "BLOCKED-UDP-OUT: "
+
 # بلاک لیست IP و Subnet
 iptables -A INPUT -m set --match-set blacklist src -j DROP
 iptables -A INPUT -m set --match-set blacklist_subnet src -j DROP
@@ -152,7 +155,7 @@ TOKEN="__TOKEN__"
 CHAT_ID="__CHATID__"
 
 # استخراج آی‌پی‌هایی که دارای الگوی SRC= هستند یا لاگ‌های SSH فیل شده
-grep -E "Failed password|scan" $LOGFILE \
+grep -E "Failed password|scan|BLOCKED-UDP-OUT" $LOGFILE \
   | grep -oE 'SRC=([0-9]{1,3}\.){3}[0-9]{1,3}' \
   | cut -d= -f2 > $TMPFILE
 
