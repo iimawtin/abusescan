@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# ---------------------------
+# AidenGuard: Firewall Script with Dynamic Tunnel IP Detection
+# ---------------------------
+
 echo -e "\e[1;34m🔐 Start installing and configuring advanced security...\e[0m"
 
 # بررسی دسترسی روت
@@ -57,6 +61,25 @@ curl -fsSL https://raw.githubusercontent.com/iimawtin/abusescan/main/update-blac
 chmod +x /usr/local/bin/update-blacklist.sh >/dev/null 2>&1
 bash /usr/local/bin/update-blacklist.sh
 
+# -----------------------------
+# 🔥 Smart UDP Tunnel Handling (Discord / Steam)
+# -----------------------------
+INTERFACE_NAME="NetForward-GR2"
+IRAN_IP=$(ip -4 addr show dev "$INTERFACE_NAME" | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
+
+if [[ -n "$IRAN_IP" ]]; then
+  echo -e "\e[1;32m✅ Iranian Tunnel IP Detected: $IRAN_IP\e[0m"
+  iptables -A OUTPUT -p udp --dport 10000:65535 -s "$IRAN_IP" -j ACCEPT
+else
+  echo -e "\e[1;31m⚠️ Tunnel IP not found on $INTERFACE_NAME. Voice UDP might be blocked.\e[0m"
+fi
+
+iptables -A OUTPUT -p udp --dport 5564 -j DROP
+iptables -A OUTPUT -p udp --dport 16658 -j DROP
+iptables -A OUTPUT -p udp -j LOG --log-prefix "BLOCKED-UDP-OUT: "
+
+# ادامه قوانین فایروال...
+
 # قوانین پیش‌فرض
 iptables -P INPUT DROP
 iptables -P FORWARD DROP
@@ -92,8 +115,6 @@ for port in $ALL_PORTS; do
   iptables -A OUTPUT -p tcp --dport "$port" -j ACCEPT
   iptables -A OUTPUT -p udp --dport "$port" -j ACCEPT
 done
-
-iptables -A OUTPUT -p udp --dport 10000:65535 -j ACCEPT
 
 # 🔍 لاگ اسکن udp:
 iptables -A OUTPUT -p udp -j LOG --log-prefix "BLOCKED-UDP-OUT: "
