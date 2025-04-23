@@ -96,9 +96,6 @@ ip6tables -A OUTPUT -p udp -j LOG --log-prefix "BLOCKED6-UDP-OUT: "
 iptables -P INPUT DROP
 iptables -P FORWARD DROP
 iptables -P OUTPUT DROP
-ip6tables -P INPUT DROP
-ip6tables -P FORWARD DROP
-ip6tables -P OUTPUT DROP
 
 # اجازه به اتصال‌های موجود و ICMP
 iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
@@ -109,6 +106,8 @@ ip6tables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 ip6tables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 ip6tables -A INPUT -p ipv6-icmp -j ACCEPT
 ip6tables -A OUTPUT -p ipv6-icmp -j ACCEPT
+
+ip6tables -A OUTPUT -p tcp --dport 443 -j ACCEPT
 
 # اجازه به ترافیک پروتکل SIT (proto 41)
 iptables -A INPUT -p 41 -j ACCEPT     # برای SIT tunnel ورودی
