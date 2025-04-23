@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ---------------------------
-# AidenGuard: Firewall Script Cleaned (No ip6tables)
+# AidenGuard: Firewall Script with IPv6 Support for Voice & Games
 # ---------------------------
 
 echo -e "\e[1;34m🔐 Start installing and configuring advanced security...\e[0m"
@@ -54,6 +54,8 @@ iptables -X
 iptables -t nat -F
 iptables -t nat -X
 ipset flush
+ip6tables -F
+ip6tables -X
 
 # دریافت و اجرای به‌روز‌رسانی لیست سیاه
 curl -fsSL https://raw.githubusercontent.com/iimawtin/abusescan/main/update-blacklist.sh \
@@ -62,10 +64,11 @@ chmod +x /usr/local/bin/update-blacklist.sh >/dev/null 2>&1
 bash /usr/local/bin/update-blacklist.sh
 
 # -----------------------------
-# 🔥 Smart UDP Tunnel Handling (Only IPv4)
+# 🔥 Smart UDP Tunnel Handling
 # -----------------------------
 INTERFACE_NAME="NetForward-GR2"
 IRAN_IPV4=$(ip -d link show dev "$INTERFACE_NAME" | grep -oP '(?<=peer )\d+(\.\d+){3}')
+IRAN_IPV6="2a05:cd00::1"
 
 if [[ -n "$IRAN_IPV4" ]]; then
   echo -e "\e[1;32m✅ IPv4 Tunnel IP Detected: $IRAN_IPV4\e[0m"
@@ -74,7 +77,15 @@ else
   echo -e "\e[1;31m⚠️ IPv4 Tunnel IP not found on $INTERFACE_NAME.\e[0m"
 fi
 
-ip6tables -A OUTPUT -p udp --dport 10000:65535 -s 2a05:cd00::1 -j ACCEPT
+ip6tables -P INPUT DROP
+ip6tables -P OUTPUT DROP
+ip6tables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+ip6tables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+ip6tables -A INPUT -p ipv6-icmp -j ACCEPT
+ip6tables -A OUTPUT -p ipv6-icmp -j ACCEPT
+ip6tables -A OUTPUT -p udp --dport 10000:65535 -s $IRAN_IPV6 -j ACCEPT
+ip6tables -A OUTPUT -p udp --dport 53 -j ACCEPT
+ip6tables -A OUTPUT -p udp --dport 443 -j ACCEPT
 
 # بلاک پورت‌های مشکوک در IPv4
 iptables -A OUTPUT -p udp --dport 5564 -j DROP
@@ -95,9 +106,9 @@ iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 iptables -A OUTPUT -p icmp -j ACCEPT
 
 # اجازه به ترافیک پروتکل SIT (proto 41)
-iptables -A INPUT -p 41 -j ACCEPT     # برای SIT tunnel ورودی
-iptables -A OUTPUT -p 41 -j ACCEPT    # برای ترافیک خروجی تونل
-iptables -A FORWARD -p 41 -j ACCEPT   # اگر ترافیک از روی سرور عبور می‌کند
+iptables -A INPUT -p 41 -j ACCEPT
+iptables -A OUTPUT -p 41 -j ACCEPT
+iptables -A FORWARD -p 41 -j ACCEPT
 
 # باز کردن پورت‌ها روی INPUT
 INTERNAL_ALLOWED_PORTS="22 62789 8443 8080 3306 80 53 5228 443 123 10085"
@@ -107,14 +118,15 @@ for port in $ALL_PORTS; do
   iptables -A INPUT -p udp --dport "$port" -j ACCEPT
   iptables -A OUTPUT -p tcp --dport "$port" -j ACCEPT
   iptables -A OUTPUT -p udp --dport "$port" -j ACCEPT
+  ip6tables -A OUTPUT -p tcp --dport "$port" -j ACCEPT
 done
 
 # مجاز کردن خروجی فقط به پورت‌های UDP مهم
-iptables -A OUTPUT -p udp --dport 53 -j ACCEPT     # DNS
-iptables -A OUTPUT -p udp --dport 443 -j ACCEPT    # QUIC
-iptables -A OUTPUT -p udp --dport 123 -j ACCEPT    # NTP
-iptables -A OUTPUT -p udp --dport 5228 -j ACCEPT   # Google Play Services
-iptables -A OUTPUT -p udp --dport 10085 -j ACCEPT  # Xray outbound UDP
+iptables -A OUTPUT -p udp --dport 53 -j ACCEPT
+iptables -A OUTPUT -p udp --dport 443 -j ACCEPT
+iptables -A OUTPUT -p udp --dport 123 -j ACCEPT
+iptables -A OUTPUT -p udp --dport 5228 -j ACCEPT
+iptables -A OUTPUT -p udp --dport 10085 -j ACCEPT
 
 # بلاک لیست IP و Subnet
 iptables -A INPUT -m set --match-set blacklist src -j DROP
