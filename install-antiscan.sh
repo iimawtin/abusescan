@@ -46,13 +46,15 @@ read -p "📨 Chat ID: " CHAT_ID
 read -p "📡 Allowed ports (example: 22 443 9090): " PORTS
 
 # نصب ابزارها
-apt-get install -y iptables ipset curl >/dev/null 2>&1
+apt-get install -y iptables ipset iproute2 ip6tables curl >/dev/null 2>&1
 
 # پاکسازی قوانین قبلی
 iptables -F
 iptables -X
 iptables -t nat -F
 iptables -t nat -X
+ip6tables -F
+ip6tables -X
 ipset flush
 
 # دریافت و اجرای به‌روز‌رسانی لیست سیاه
@@ -62,21 +64,31 @@ chmod +x /usr/local/bin/update-blacklist.sh >/dev/null 2>&1
 bash /usr/local/bin/update-blacklist.sh
 
 # -----------------------------
-# 🔥 Smart UDP Tunnel Handling (Discord / Steam)
+# 🔥 Smart UDP Tunnel Handling (IPv4 & IPv6)
 # -----------------------------
 INTERFACE_NAME="NetForward-GR2"
-IRAN_IP=$(ip -d link show dev "$INTERFACE_NAME" | grep -oP '(?<=peer )\d+(\.\d+){3}')
+IRAN_IPV4=$(ip -d link show dev "$INTERFACE_NAME" | grep -oP '(?<=peer )\d+(\.\d+){3}')
+IRAN_IPV6="2a05:cd00::1"
 
-if [[ -n "$IRAN_IP" ]]; then
-  echo -e "\e[1;32m✅ Iranian Tunnel IP Detected: $IRAN_IP\e[0m"
-  iptables -A OUTPUT -p udp --dport 10000:65535 -s "$IRAN_IP" -j ACCEPT
+if [[ -n "$IRAN_IPV4" ]]; then
+  echo -e "\e[1;32m✅ IPv4 Tunnel IP Detected: $IRAN_IPV4\e[0m"
+  iptables -A OUTPUT -p udp --dport 10000:65535 -s "$IRAN_IPV4" -j ACCEPT
 else
-  echo -e "\e[1;31m⚠️ Tunnel IP not found on $INTERFACE_NAME. Voice UDP might be blocked.\e[0m"
+  echo -e "\e[1;31m⚠️ IPv4 Tunnel IP not found on $INTERFACE_NAME.\e[0m"
 fi
 
+# IPv6 ثابت برای ترافیک صوتی از ایران
+ip6tables -A OUTPUT -p udp --dport 10000:65535 -s "$IRAN_IPV6" -j ACCEPT
+
+# بلاک پورت‌های مشکوک در هر دو نسخه IP
 iptables -A OUTPUT -p udp --dport 5564 -j DROP
 iptables -A OUTPUT -p udp --dport 16658 -j DROP
+ip6tables -A OUTPUT -p udp --dport 5564 -j DROP
+ip6tables -A OUTPUT -p udp --dport 16658 -j DROP
+
+# لاگ‌گیری برای UDPهای بلاک‌شده
 iptables -A OUTPUT -p udp -j LOG --log-prefix "BLOCKED-UDP-OUT: "
+ip6tables -A OUTPUT -p udp -j LOG --log-prefix "BLOCKED6-UDP-OUT: "
 
 # ادامه قوانین فایروال...
 
@@ -84,12 +96,19 @@ iptables -A OUTPUT -p udp -j LOG --log-prefix "BLOCKED-UDP-OUT: "
 iptables -P INPUT DROP
 iptables -P FORWARD DROP
 iptables -P OUTPUT DROP
+ip6tables -P INPUT DROP
+ip6tables -P FORWARD DROP
+ip6tables -P OUTPUT DROP
 
 # اجازه به اتصال‌های موجود و ICMP
 iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 iptables -A INPUT -p icmp -j ACCEPT
 iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 iptables -A OUTPUT -p icmp -j ACCEPT
+ip6tables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+ip6tables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+ip6tables -A INPUT -p ipv6-icmp -j ACCEPT
+ip6tables -A OUTPUT -p ipv6-icmp -j ACCEPT
 
 # اجازه به ترافیک پروتکل SIT (proto 41)
 iptables -A INPUT -p 41 -j ACCEPT     # برای SIT tunnel ورودی
