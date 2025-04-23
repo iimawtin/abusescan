@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ---------------------------
-# AidenGuard: Firewall Script with IPv6 Tunnel Auto-Detection ✅
+# AidenGuard: Firewall Script with Loose IPv6 UDP Tunnel Access 🎮
 # ---------------------------
 
 echo -e "\e[1;34m🔐 Start installing and configuring advanced security...\e[0m"
@@ -64,7 +64,7 @@ chmod +x /usr/local/bin/update-blacklist.sh >/dev/null 2>&1
 bash /usr/local/bin/update-blacklist.sh
 
 # -----------------------------
-# 🔥 Smart UDP Tunnel Handling (IPv4 + IPv6 Auto-Detect)
+# 🔥 Smart UDP Tunnel Handling (IPv4 + Loose IPv6)
 # -----------------------------
 INTERFACE_NAME="NetForward-GR2"
 IRAN_IPV4=$(ip -d link show dev "$INTERFACE_NAME" | grep -oP '(?<=peer )\d+(\.\d+){3}')
@@ -79,7 +79,7 @@ fi
 
 if [[ -n "$IRAN_IPV6" ]]; then
   echo -e "\e[1;32m✅ IPv6 Tunnel IP Detected: $IRAN_IPV6\e[0m"
-  ip6tables -A OUTPUT -p udp --dport 10000:65535 -s "$IRAN_IPV6" -j ACCEPT
+  ip6tables -A OUTPUT -p udp -s "$IRAN_IPV6" -j ACCEPT
 else
   echo -e "\e[1;31m⚠️ IPv6 Tunnel IP not found on $INTERFACE_NAME.\e[0m"
 fi
@@ -95,8 +95,8 @@ iptables -A OUTPUT -p udp -j LOG --log-prefix "BLOCKED-UDP-OUT: "
 iptables -P INPUT DROP
 iptables -P FORWARD DROP
 iptables -P OUTPUT DROP
-ip6tables -P INPUT DROP
-ip6tables -P FORWARD DROP
+ip6tables -P INPUT ACCEPT
+ip6tables -P FORWARD ACCEPT
 ip6tables -P OUTPUT DROP
 
 # اجازه به اتصال‌های موجود و ICMP
@@ -126,10 +126,6 @@ for port in $ALL_PORTS; do
   ip6tables -A OUTPUT -p udp --dport "$port" -j ACCEPT
   ip6tables -A INPUT -p tcp --dport "$port" -j ACCEPT
   ip6tables -A INPUT -p udp --dport "$port" -j ACCEPT
-  ip6tables -A INPUT -p tcp -m multiport --dports "$port" -j ACCEPT
-  ip6tables -A INPUT -p udp -m multiport --dports "$port" -j ACCEPT
-  ip6tables -A OUTPUT -p tcp -m multiport --dports "$port" -j ACCEPT
-  ip6tables -A OUTPUT -p udp -m multiport --dports "$port" -j ACCEPT
 
 done
 
