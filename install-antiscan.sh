@@ -68,6 +68,11 @@ iptables -A INPUT -p icmp -j ACCEPT
 iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 iptables -A OUTPUT -p icmp -j ACCEPT
 
+# اجازه به ترافیک پروتکل SIT (proto 41)
+iptables -A INPUT -p 41 -j ACCEPT     # برای SIT tunnel ورودی
+iptables -A OUTPUT -p 41 -j ACCEPT    # برای ترافیک خروجی تونل
+iptables -A FORWARD -p 41 -j ACCEPT   # اگر ترافیک از روی سرور عبور می‌کنه (روتینگ)
+
 # باز کردن پورت‌ها روی INPUT
 INTERNAL_ALLOWED_PORTS="22 62789 8443 8080 3306 80 53 5228 443 123 10085"
 ALL_PORTS=$(echo "$PORTS $INTERNAL_ALLOWED_PORTS" | tr ' ' '\n' | sort -u | tr '\n' ' ')
