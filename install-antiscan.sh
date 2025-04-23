@@ -84,18 +84,18 @@ for port in $ALL_PORTS; do
 
 done
 
-# مجاز کردن خروجی فقط به پورت‌های UDP مهم
-iptables -A OUTPUT -p udp --dport 53 -j ACCEPT
-iptables -A OUTPUT -p udp --dport 443 -j ACCEPT
-iptables -A OUTPUT -p udp --dport 123 -j ACCEPT
-iptables -A OUTPUT -p udp --dport 5228 -j ACCEPT
-iptables -A OUTPUT -p udp --dport 10085 -j ACCEPT
+# ✅ پورت‌های مجاز UDP برای سرویس‌های خاص
+iptables -A OUTPUT -p udp --dport 53 -j ACCEPT         # DNS
+iptables -A OUTPUT -p udp --dport 443 -j ACCEPT        # QUIC (Google/Telegram)
+iptables -A OUTPUT -p udp --dport 123 -j ACCEPT        # NTP
+iptables -A OUTPUT -p udp --dport 5228 -j ACCEPT       # Google Play Services
+iptables -A OUTPUT -p udp --dport 10085 -j ACCEPT      # Xray outbound
+iptables -A OUTPUT -p udp --dport 3478:3481 -j ACCEPT  # Discord voice
+iptables -A OUTPUT -p udp --dport 9339 -j ACCEPT       # Clash of Clans
 
-# باز کردن کل رنج UDP برای تست
-iptables -A OUTPUT -p udp --dport 10000:65535 -j ACCEPT
-
-# 🔍 لاگ اسکن udp:
-iptables -A OUTPUT -p udp -j LOG --log-prefix "BLOCKED-UDP-OUT: "
+# ❌ لاگ و بلاک باقی پورت‌های خروجی UDP
+iptables -A OUTPUT -p udp -j LOG --log-prefix "❌ BLOCKED-UDP-OUT: "
+iptables -A OUTPUT -p udp -j DROP
 
 # بلاک لیست IP و Subnet
 iptables -A INPUT -m set --match-set blacklist src -j DROP
