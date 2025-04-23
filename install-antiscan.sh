@@ -83,6 +83,11 @@ iptables -A OUTPUT -p udp --dport 123 -j ACCEPT    # NTP
 iptables -A OUTPUT -p udp --dport 5228 -j ACCEPT   # Google Play Services
 iptables -A OUTPUT -p udp --dport 10085 -j ACCEPT  # Xray outbound UDP
 
+for port in $ALL_PORTS; do
+  iptables -A OUTPUT -p tcp --dport "$port" -j ACCEPT
+  iptables -A OUTPUT -p udp --dport "$port" -j ACCEPT
+done
+
 # 🔍 لاگ اسکن udp:
 iptables -A OUTPUT -p udp -j LOG --log-prefix "BLOCKED-UDP-OUT: "
 
@@ -114,15 +119,15 @@ iptables -A FORWARD -p udp --dport 53 -j ACCEPT
 iptables -A FORWARD -p udp --dport 443 -j ACCEPT
 iptables -A FORWARD -j DROP
 
-# محدودسازی سخت UDP (INPUT)
-iptables -A INPUT -p udp -m limit --limit 10/second --limit-burst 20 -j ACCEPT
-iptables -A INPUT -p udp -j DROP
-
-iptables -A INPUT -p udp -m length --length 0:512 -j ACCEPT
-iptables -A INPUT -p udp -j DROP
-
+# Anti-scan با recent
 iptables -A INPUT -p udp -m recent --name UDPSCAN --rcheck --seconds 10 --hitcount 3 -j DROP
 iptables -A INPUT -p udp -m recent --name UDPSCAN --set -j ACCEPT
+
+# سپس محدودسازی سرعت
+iptables -A INPUT -p udp -m limit --limit 10/second --limit-burst 20 -j ACCEPT
+
+# باقی UDPها بلاک
+iptables -A INPUT -p udp -j DROP
 
 iptables -A INPUT -p udp --dport 16658 -j DROP
 iptables -A INPUT -p udp --dport 5564 -j DROP
