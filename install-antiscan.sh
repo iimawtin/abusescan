@@ -60,11 +60,15 @@ bash /usr/local/bin/update-blacklist.sh
 # قوانین پیش‌فرض
 iptables -P INPUT DROP
 iptables -P FORWARD DROP
-iptables -P OUTPUT ACCEPT
+iptables -P OUTPUT DROP
+
+# اجازه به اتصال‌های موجود و ICMP
 iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 iptables -A INPUT -p icmp -j ACCEPT
+iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+iptables -A OUTPUT -p icmp -j ACCEPT
 
-# باز کردن پورت‌ها
+# باز کردن پورت‌ها روی INPUT
 INTERNAL_ALLOWED_PORTS="22 62789 8443 8080 3306 80 53 5228 443 123 10085"
 ALL_PORTS=$(echo "$PORTS $INTERNAL_ALLOWED_PORTS" | tr ' ' '\n' | sort -u | tr '\n' ' ')
 for port in $ALL_PORTS; do
@@ -72,11 +76,18 @@ for port in $ALL_PORTS; do
   iptables -A INPUT -p udp --dport "$port" -j ACCEPT
 done
 
+# مجاز کردن خروجی فقط به پورت‌های UDP مهم
+iptables -A OUTPUT -p udp --dport 53 -j ACCEPT     # DNS
+iptables -A OUTPUT -p udp --dport 443 -j ACCEPT    # QUIC
+iptables -A OUTPUT -p udp --dport 123 -j ACCEPT    # NTP
+iptables -A OUTPUT -p udp --dport 5228 -j ACCEPT   # Google Play Services
+iptables -A OUTPUT -p udp --dport 10085 -j ACCEPT  # Xray outbound UDP
+
 # بلاک لیست IP و Subnet
 iptables -A INPUT -m set --match-set blacklist src -j DROP
 iptables -A INPUT -m set --match-set blacklist_subnet src -j DROP
 
-# قوانین اسکن
+# قوانین ضد اسکن
 iptables -A INPUT -p tcp --tcp-flags ALL NONE -j LOG --log-prefix "NULL scan: "
 ip6tables -A INPUT -p tcp --tcp-flags ALL NONE -j DROP
 iptables -A INPUT -p tcp --tcp-flags ALL FIN,PSH,URG -j LOG --log-prefix "XMAS scan: "
@@ -86,21 +97,21 @@ ip6tables -A INPUT -p tcp --tcp-flags ALL FIN -j DROP
 iptables -A INPUT -p tcp --tcp-flags SYN,FIN SYN,FIN -j LOG --log-prefix "SYN/FIN scan: "
 ip6tables -A INPUT -p tcp --tcp-flags SYN,FIN SYN,FIN -j DROP
 
-# محدودسازی ترافیک داخلی
+# محدودسازی ترافیک داخلی در FORWARD
 iptables -A FORWARD -i eth0 -s 10.0.0.0/8 -d 10.0.0.0/8 -j DROP
 iptables -A FORWARD -i eth0 -s 192.168.0.0/16 -d 192.168.0.0/16 -j DROP
 iptables -A FORWARD -i eth0 -s 102.192.0.0/16 -d 102.192.0.0/16 -j DROP
 iptables -A FORWARD -i eth0 -s 172.16.0.0/12 -d 172.16.0.0/12 -j DROP
 iptables -A FORWARD -i eth0 -s 192.0.0.0/12 -d 192.0.0.0/12 -j DROP
 
-# محدودسازی خروجی
+# محدودسازی مجاز FORWARD (خروجی)
 iptables -A FORWARD -p tcp --dport 80 -j ACCEPT
 iptables -A FORWARD -p tcp --dport 443 -j ACCEPT
 iptables -A FORWARD -p udp --dport 53 -j ACCEPT
 iptables -A FORWARD -p udp --dport 443 -j ACCEPT
 iptables -A FORWARD -j DROP
 
-# محدودسازی سخت UDP (تمام UDP غیرمجاز محدود و بلاک می‌شن)
+# محدودسازی سخت UDP (INPUT)
 iptables -A INPUT -p udp -m limit --limit 10/second --limit-burst 20 -j ACCEPT
 iptables -A INPUT -p udp -j DROP
 
