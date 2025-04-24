@@ -82,25 +82,42 @@ for port in $ALL_PORTS; do
   iptables -A OUTPUT -p tcp --dport "$port" -j ACCEPT
   iptables -A OUTPUT -p udp --dport "$port" -j ACCEPT
 
+  # hashlimit برای پورت‌های بالای 10000 فقط
+  if [[ "$port" -ge 10000 ]]; then
+    iptables -A OUTPUT -p udp --dport "$port" -m hashlimit \
+      --hashlimit-name abuse \
+      --hashlimit-above 20/minute \
+      --hashlimit-burst 10 \
+      --hashlimit-mode srcip \
+      --hashlimit-htable-expire 60000 \
+      -j LOG --log-prefix "⚠️ UDP FLOOD: "
+    iptables -A OUTPUT -p udp --dport "$port" -m hashlimit \
+      --hashlimit-name abuse \
+      --hashlimit-above 20/minute \
+      --hashlimit-burst 10 \
+      --hashlimit-mode srcip \
+      --hashlimit-htable-expire 60000 \
+      -j DROP
+  fi
+
 done
 
 # ✅ پورت‌های مجاز UDP برای سرویس‌های خاص
-iptables -A OUTPUT -p udp --dport 53 -j ACCEPT         # DNS
-iptables -A OUTPUT -p udp --dport 443 -j ACCEPT        # QUIC (Google/Telegram)
-iptables -A OUTPUT -p udp --dport 123 -j ACCEPT        # NTP
-iptables -A OUTPUT -p udp --dport 5228 -j ACCEPT       # Google Play Services
-iptables -A OUTPUT -p udp --dport 10085 -j ACCEPT      # Xray outbound
-iptables -A OUTPUT -p udp --dport 3478:3481 -j ACCEPT  # Discord voice
-iptables -A OUTPUT -p udp --dport 9339 -j ACCEPT       # Clash of Clans
+iptables -A OUTPUT -p udp --dport 53 -j ACCEPT
+iptables -A OUTPUT -p udp --dport 443 -j ACCEPT
+iptables -A OUTPUT -p udp --dport 123 -j ACCEPT
+iptables -A OUTPUT -p udp --dport 5228 -j ACCEPT
+iptables -A OUTPUT -p udp --dport 10085 -j ACCEPT
+iptables -A OUTPUT -p udp --dport 3478:3481 -j ACCEPT
+iptables -A OUTPUT -p udp --dport 9339 -j ACCEPT
 
-iptables -A OUTPUT -p udp --dport 10000:65535 -s 85.133.218.147 -j ACCEPT
-ip6tables -A OUTPUT -p udp --dport 10000:65535 -s 2a05:cd00::1 -j ACCEPT
-ip6tables -A OUTPUT -p udp --dport 10000:65535 -s 2a05:cd00::2 -j ACCEPT
+# مجاز با محدودیت برای تست UDPهای ناشناس
+iptables -A OUTPUT -p udp --dport 10000:65535 -m limit --limit 3/second --limit-burst 5 -j ACCEPT
+iptables -A OUTPUT -p udp --dport 10000:65535 -j LOG --log-prefix "❌ ABUSE-UDP: "
 
-
-# ❌ لاگ و بلاک باقی پورت‌های خروجی UDP
-iptables -A OUTPUT -p udp -j LOG --log-prefix "❌ BLOCKED-UDP-OUT: "
-iptables -A OUTPUT -p udp -j DROP
+# 2. بستن باقی UDPهای مشکوک خارج از whitelist
+iptables -A OUTPUT -p udp --dport 5564 -j DROP
+iptables -A OUTPUT -p udp --dport 16658 -j DROP
 
 # بلاک لیست IP و Subnet
 iptables -A INPUT -m set --match-set blacklist src -j DROP
@@ -165,8 +182,8 @@ HOSTNAME=$(hostname)
 TOKEN="__TOKEN__"
 CHAT_ID="__CHATID__"
 
-# استخراج آی‌پی‌هایی که دارای الگوی SRC= هستند یا لاگ‌های SSH فیل شده
-grep -E "Failed password|scan|BLOCKED-UDP-OUT" $LOGFILE \
+# استخراج آی‌پی‌هایی که دارای الگوی SRC= هستند یا لاگ‌های SSH فیل شده یا UDP ABUSE
+grep -E "Failed password|scan|BLOCKED-UDP-OUT|ABUSE-UDP" $LOGFILE \
   | grep -oE 'SRC=([0-9]{1,3}\.){3}[0-9]{1,3}' \
   | cut -d= -f2 > $TMPFILE
 
@@ -179,6 +196,7 @@ for ip in $(sort $TMPFILE | uniq); do
     curl -s -X POST "https://api.telegram.org/bot$TOKEN/sendMessage" \
       -d "chat_id=$CHAT_ID&text=🚨 آی‌پی $ip در سرور $HOSTNAME بلاک شد." > /dev/null 2>&1
   fi
+
 done
 EOF
 
