@@ -79,11 +79,28 @@ ALL_PORTS=$(echo "$PORTS $INTERNAL_ALLOWED_PORTS" | tr ' ' '\n' | sort -u | tr '
 for port in $ALL_PORTS; do
   iptables -A INPUT -p tcp --dport "$port" -j ACCEPT
   iptables -A INPUT -p udp --dport "$port" -j ACCEPT
-
   iptables -A OUTPUT -p tcp --dport "$port" -j ACCEPT
   iptables -A OUTPUT -p udp --dport "$port" -j ACCEPT
-done
 
+  # hashlimit برای پورت‌های بالای 10000 فقط
+  if [[ "$port" -ge 10000 ]]; then
+    iptables -A OUTPUT -p udp --dport "$port" -m hashlimit \
+      --hashlimit-name abuse \
+      --hashlimit-above 20/minute \
+      --hashlimit-burst 10 \
+      --hashlimit-mode srcip \
+      --hashlimit-htable-expire 60000 \
+      -j LOG --log-prefix "⚠️ UDP FLOOD: "
+    iptables -A OUTPUT -p udp --dport "$port" -m hashlimit \
+      --hashlimit-name abuse \
+      --hashlimit-above 20/minute \
+      --hashlimit-burst 10 \
+      --hashlimit-mode srcip \
+      --hashlimit-htable-expire 60000 \
+      -j DROP
+  fi
+
+done
 
 # ✅ پورت‌های مجاز UDP برای سرویس‌های خاص
 iptables -A OUTPUT -p tcp --dport 5222 -j ACCEPT
@@ -93,9 +110,25 @@ iptables -A OUTPUT -p udp --dport 123 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 5228 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 10085 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 3478:3481 -j ACCEPT
+iptables -A INPUT -p tcp --dport 9300:9400 -j ACCEPT
+iptables -A OUTPUT -p tcp --dport 9300:9400 -j ACCEPT
+iptables -A INPUT -p udp --dport 9300:9400 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 9300:9400 -j ACCEPT
-iptables -A OUTPUT -p udp --dport 10000:65535 -j ACCEPT
 
+
+iptables -N HIGHPORTS
+iptables -A OUTPUT -p udp --dport 10000:65535 -j HIGHPORTS
+
+iptables -A HIGHPORTS -m hashlimit \
+  --hashlimit-name abuse \
+  --hashlimit-above 30/minute \
+  --hashlimit-burst 15 \
+  --hashlimit-mode srcip \
+  --hashlimit-htable-expire 60000 \
+  -j ACCEPT
+
+iptables -A HIGHPORTS -j LOG --log-prefix "❌ ABUSE-UDP: "
+iptables -A HIGHPORTS -j DROP
 
 # 2. بستن باقی UDPهای مشکوک خارج از whitelist
 iptables -A OUTPUT -p udp --dport 5564 -j DROP
@@ -125,6 +158,12 @@ iptables -A FORWARD -p udp --dport 53 -j ACCEPT
 iptables -A FORWARD -p udp --dport 443 -j ACCEPT
 iptables -A FORWARD -j DROP
 
+# Anti-scan با recent
+iptables -A INPUT -p udp -m recent --name UDPSCAN --rcheck --seconds 10 --hitcount 3 -j DROP
+iptables -A INPUT -p udp -m recent --name UDPSCAN --set -j ACCEPT
+
+# سپس محدودسازی سرعت
+iptables -A INPUT -p udp -m limit --limit 10/second --limit-burst 20 -j ACCEPT
 
 # باقی UDPها بلاک
 iptables -A INPUT -p udp -j DROP
