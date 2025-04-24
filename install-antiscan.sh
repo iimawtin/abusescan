@@ -91,6 +91,7 @@ iptables -A OUTPUT -p udp --dport 5228 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 10085 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 3478:3481 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 9300:9400 -j ACCEPT
+iptables -A OUTPUT -p udp --dport 10000:65535 -j ACCEPT
 
 
 # 2. بستن باقی UDPهای مشکوک خارج از whitelist
@@ -121,12 +122,6 @@ iptables -A FORWARD -p udp --dport 53 -j ACCEPT
 iptables -A FORWARD -p udp --dport 443 -j ACCEPT
 iptables -A FORWARD -j DROP
 
-# Anti-scan با recent
-iptables -A INPUT -p udp -m recent --name UDPSCAN --rcheck --seconds 10 --hitcount 5 -j DROP
-iptables -A INPUT -p udp -m recent --name UDPSCAN --set -j ACCEPT
-
-# سپس محدودسازی سرعت
-iptables -A INPUT -p udp -m limit --limit 10/second --limit-burst 20 -j ACCEPT
 
 # باقی UDPها بلاک
 iptables -A INPUT -p udp -j DROP
