@@ -103,17 +103,39 @@ for port in $ALL_PORTS; do
 done
 
 # ✅ پورت‌های مجاز UDP برای سرویس‌های خاص
+iptables -A OUTPUT -p tcp --dport 5222 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 53 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 443 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 123 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 5228 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 10085 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 3478:3481 -j ACCEPT
-iptables -A OUTPUT -p udp --dport 9339 -j ACCEPT
+iptables -A OUTPUT -p udp --dport 9330:9340 -j ACCEPT
 
 # مجاز با محدودیت برای تست UDPهای ناشناس
-iptables -A OUTPUT -p udp --dport 10000:65535 -m limit --limit 3/second --limit-burst 5 -j ACCEPT
-iptables -A OUTPUT -p udp --dport 10000:65535 -j LOG --log-prefix "❌ ABUSE-UDP: "
+iptables -A OUTPUT -p udp --dport 10000:65535 -m hashlimit \
+  --hashlimit-name softsafe \
+  --hashlimit-above 30/minute \
+  --hashlimit-burst 15 \
+  --hashlimit-mode srcip \
+  --hashlimit-htable-expire 60000 \
+  -j ACCEPT
+
+iptables -A OUTPUT -p udp --dport 10000:65535 -m hashlimit \
+  --hashlimit-name abuse_highports \
+  --hashlimit-above 30/minute \
+  --hashlimit-burst 15 \
+  --hashlimit-mode srcip \
+  --hashlimit-htable-expire 60000 \
+  -j LOG --log-prefix "❌ ABUSE-UDP: "
+
+iptables -A OUTPUT -p udp --dport 10000:65535 -m hashlimit \
+  --hashlimit-name abuse \
+  --hashlimit-above 30/minute \
+  --hashlimit-burst 15 \
+  --hashlimit-mode srcip \
+  --hashlimit-htable-expire 60000 \
+  -j DROP
 
 # 2. بستن باقی UDPهای مشکوک خارج از whitelist
 iptables -A OUTPUT -p udp --dport 5564 -j DROP
