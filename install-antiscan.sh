@@ -110,7 +110,7 @@ iptables -A OUTPUT -p udp --dport 123 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 5228 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 10085 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 3478:3481 -j ACCEPT
-iptables -A OUTPUT -p udp --dport 9330:9340 -j ACCEPT
+iptables -A OUTPUT -p udp --dport 9300:9400 -j ACCEPT
 
 # مجاز با محدودیت برای تست UDPهای ناشناس
 iptables -A OUTPUT -p udp --dport 10000:65535 -m hashlimit \
