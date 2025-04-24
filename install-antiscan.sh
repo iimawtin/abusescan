@@ -93,6 +93,11 @@ iptables -A OUTPUT -p udp --dport 10085 -j ACCEPT      # Xray outbound
 iptables -A OUTPUT -p udp --dport 3478:3481 -j ACCEPT  # Discord voice
 iptables -A OUTPUT -p udp --dport 9339 -j ACCEPT       # Clash of Clans
 
+iptables -A OUTPUT -p udp --dport 10000:65535 -s 85.133.218.147 -j ACCEPT
+ip6tables -A OUTPUT -p udp --dport 10000:65535 -s 2a05:cd00::1 -j ACCEPT
+ip6tables -A OUTPUT -p udp --dport 10000:65535 -s 2a05:cd00::2 -j ACCEPT
+
+
 # ❌ لاگ و بلاک باقی پورت‌های خروجی UDP
 iptables -A OUTPUT -p udp -j LOG --log-prefix "❌ BLOCKED-UDP-OUT: "
 iptables -A OUTPUT -p udp -j DROP
