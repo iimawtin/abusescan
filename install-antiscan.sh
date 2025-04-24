@@ -79,6 +79,9 @@ ALL_PORTS=$(echo "$PORTS $INTERNAL_ALLOWED_PORTS" | tr ' ' '\n' | sort -u | tr '
 for port in $ALL_PORTS; do
   iptables -A INPUT -p tcp --dport "$port" -j ACCEPT
   iptables -A INPUT -p udp --dport "$port" -j ACCEPT
+
+  iptables -A OUTPUT -p tcp --dport "$port" -j ACCEPT
+  iptables -A OUTPUT -p udp --dport "$port" -j ACCEPT
 done
 
 
