@@ -197,21 +197,31 @@ HOSTNAME=$(hostname)
 TOKEN="__TOKEN__"
 CHAT_ID="__CHATID__"
 
+# ⚪️ آی‌پی‌هایی که نباید هیچ‌وقت بلاک بشن
+WHITELIST=("127.0.0.1" "127.0.0.53")
+
 # استخراج آی‌پی‌هایی که دارای الگوی SRC= هستند یا لاگ‌های SSH فیل شده یا UDP ABUSE
 grep -E "Failed password|scan|BLOCKED-UDP-OUT|ABUSE-UDP" $LOGFILE \
   | grep -oE 'SRC=([0-9]{1,3}\.){3}[0-9]{1,3}' \
   | cut -d= -f2 > $TMPFILE
 
 for ip in $(sort $TMPFILE | uniq); do
+  # بررسی آی‌پی در وایت‌لیست
+  if [[ " ${WHITELIST[@]} " =~ " $ip " ]]; then
+    continue
+  fi
+
+  # اگر در ipset نبود، بلاکش کن
   if ! ipset test $IPSET_BLOCK $ip &>/dev/null; then
     ipset add $IPSET_BLOCK $ip
     subnet=$(echo $ip | awk -F. '{print $1"."$2"."$3".0/24"}')
     ipset add $IPSET_SUBNET_BLOCK $subnet
     echo "$(date) - Blocked IP: $ip from $HOSTNAME" >> /var/log/firewall.log
+
+    # ارسال نوتیف به تلگرام
     curl -s -X POST "https://api.telegram.org/bot$TOKEN/sendMessage" \
       -d "chat_id=$CHAT_ID&text=🚨 آی‌پی $ip در سرور $HOSTNAME بلاک شد." > /dev/null 2>&1
   fi
-
 done
 EOF
 
