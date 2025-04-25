@@ -114,6 +114,14 @@ iptables -A INPUT -p tcp --dport 9300:9400 -j ACCEPT
 iptables -A OUTPUT -p tcp --dport 9300:9400 -j ACCEPT
 iptables -A INPUT -p udp --dport 9300:9400 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 9300:9400 -j ACCEPT
+# باز کردن پورت‌های TCP Mobile Legend
+iptables -A INPUT -p tcp -m multiport --dports 5000:5221,5224:5227,5229:5241,5243:5508,5551:5559,5601:5700,9001,9443,10003,30000:30300 -j ACCEPT
+iptables -A OUTPUT -p tcp -m multiport --dports 5000:5221,5224:5227,5229:5241,5243:5508,5551:5559,5601:5700,9001,9443,10003,30000:30300 -j ACCEPT
+
+# باز کردن پورت‌های UDP Mobile Legend
+iptables -A INPUT -p udp -m multiport --dports 4001:4009,5000:5221,5224:5241,5243:5508,5551:5559,5601:5700,2702,3702,8001,9000:9010,9992,10003,30190,30000:30300 -j ACCEPT
+iptables -A OUTPUT -p udp -m multiport --dports 4001:4009,5000:5221,5224:5241,5243:5508,5551:5559,5601:5700,2702,3702,8001,9000:9010,9992,10003,30190,30000:30300 -j ACCEPT
+
 
 
 iptables -N HIGHPORTS
