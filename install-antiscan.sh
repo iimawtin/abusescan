@@ -73,7 +73,7 @@ iptables -A INPUT -p 41 -j ACCEPT
 iptables -A OUTPUT -p 41 -j ACCEPT
 iptables -A FORWARD -p 41 -j ACCEPT
 
-# باز کردن پورت‌ها روی INPUT
+# باز کردن پورت‌های ضروری روی INPUT و OUTPUT
 INTERNAL_ALLOWED_PORTS="22 62789 8443 8080 3306 80 53 5228 443 123 10085"
 ALL_PORTS=$(echo "$PORTS $INTERNAL_ALLOWED_PORTS" | tr ' ' '\n' | sort -u | tr '\n' ' ')
 for port in $ALL_PORTS; do
@@ -81,28 +81,9 @@ for port in $ALL_PORTS; do
   iptables -A INPUT -p udp --dport "$port" -j ACCEPT
   iptables -A OUTPUT -p tcp --dport "$port" -j ACCEPT
   iptables -A OUTPUT -p udp --dport "$port" -j ACCEPT
-
-  # hashlimit برای پورت‌های بالای 10000 فقط
-  if [[ "$port" -ge 10000 ]]; then
-    iptables -A OUTPUT -p udp --dport "$port" -m hashlimit \
-      --hashlimit-name abuse \
-      --hashlimit-above 20/minute \
-      --hashlimit-burst 10 \
-      --hashlimit-mode srcip \
-      --hashlimit-htable-expire 60000 \
-      -j LOG --log-prefix "⚠️ UDP FLOOD: "
-    iptables -A OUTPUT -p udp --dport "$port" -m hashlimit \
-      --hashlimit-name abuse \
-      --hashlimit-above 20/minute \
-      --hashlimit-burst 10 \
-      --hashlimit-mode srcip \
-      --hashlimit-htable-expire 60000 \
-      -j DROP
-  fi
-
 done
 
-# ✅ پورت‌های مجاز UDP برای سرویس‌های خاص
+# باز کردن پورت‌های خاص TCP و UDP
 iptables -A OUTPUT -p tcp --dport 5222 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 53 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 443 -j ACCEPT
@@ -110,29 +91,29 @@ iptables -A OUTPUT -p udp --dport 123 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 5228 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 10085 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 3478:3481 -j ACCEPT
+
 iptables -A INPUT -p tcp --dport 9300:9400 -j ACCEPT
 iptables -A OUTPUT -p tcp --dport 9300:9400 -j ACCEPT
 iptables -A INPUT -p udp --dport 9300:9400 -j ACCEPT
 iptables -A OUTPUT -p udp --dport 9300:9400 -j ACCEPT
+
 # باز کردن پورت‌های TCP Mobile Legend
 iptables -A INPUT -p tcp -m multiport --dports 5000:5221,5224:5227,5229:5241,5243:5508 -j ACCEPT
 iptables -A INPUT -p tcp -m multiport --dports 5551:5559,5601:5700,9001,9443,10003 -j ACCEPT
 iptables -A INPUT -p tcp -m multiport --dports 30000:30300 -j ACCEPT
-
 iptables -A OUTPUT -p tcp -m multiport --dports 5000:5221,5224:5227,5229:5241,5243:5508 -j ACCEPT
 iptables -A OUTPUT -p tcp -m multiport --dports 5551:5559,5601:5700,9001,9443,10003 -j ACCEPT
 iptables -A OUTPUT -p tcp -m multiport --dports 30000:30300 -j ACCEPT
 
-# باز کردن پورت‌های UDP (تقسیم شده)
+# باز کردن پورت‌های UDP مربوط به گیم
 iptables -A INPUT -p udp -m multiport --dports 4001:4009,5000:5221,5224:5241,5243:5508 -j ACCEPT
 iptables -A INPUT -p udp -m multiport --dports 5551:5559,5601:5700,2702,3702,8001 -j ACCEPT
 iptables -A INPUT -p udp -m multiport --dports 9000:9010,9992,10003,30190,30000:30300 -j ACCEPT
-
 iptables -A OUTPUT -p udp -m multiport --dports 4001:4009,5000:5221,5224:5241,5243:5508 -j ACCEPT
 iptables -A OUTPUT -p udp -m multiport --dports 5551:5559,5601:5700,2702,3702,8001 -j ACCEPT
 iptables -A OUTPUT -p udp -m multiport --dports 9000:9010,9992,10003,30190,30000:30300 -j ACCEPT
 
-
+# ✅ اینجا تعریف کنترل UDP پورت‌های بالا (HIGHPORTS)
 iptables -N HIGHPORTS
 iptables -A OUTPUT -p udp --dport 10000:65535 -j HIGHPORTS
 
@@ -147,7 +128,7 @@ iptables -A HIGHPORTS -m hashlimit \
 iptables -A HIGHPORTS -j LOG --log-prefix "❌ ABUSE-UDP: "
 iptables -A HIGHPORTS -j DROP
 
-# 2. بستن باقی UDPهای مشکوک خارج از whitelist
+# بستن بعضی UDPهای خطرناک خاص
 iptables -A OUTPUT -p udp --dport 5564 -j DROP
 iptables -A OUTPUT -p udp --dport 16658 -j DROP
 
@@ -155,34 +136,36 @@ iptables -A OUTPUT -p udp --dport 16658 -j DROP
 iptables -A INPUT -m set --match-set blacklist src -j DROP
 iptables -A INPUT -m set --match-set blacklist_subnet src -j DROP
 
-# قوانین ضد اسکن
+# قوانین ضد اسکن TCP
 iptables -A INPUT -p tcp --tcp-flags ALL NONE -j LOG --log-prefix "NULL scan: "
 iptables -A INPUT -p tcp --tcp-flags ALL FIN,PSH,URG -j LOG --log-prefix "XMAS scan: "
 iptables -A INPUT -p tcp --tcp-flags ALL FIN -j LOG --log-prefix "FIN scan: "
 iptables -A INPUT -p tcp --tcp-flags SYN,FIN SYN,FIN -j LOG --log-prefix "SYN/FIN scan: "
 
-# محدودسازی ترافیک داخلی در FORWARD
+# محدودسازی ترافیک داخلی روی FORWARD
 iptables -A FORWARD -i eth0 -s 10.0.0.0/8 -d 10.0.0.0/8 -j DROP
 iptables -A FORWARD -i eth0 -s 192.168.0.0/16 -d 192.168.0.0/16 -j DROP
 iptables -A FORWARD -i eth0 -s 102.192.0.0/16 -d 102.192.0.0/16 -j DROP
 iptables -A FORWARD -i eth0 -s 172.16.0.0/12 -d 172.16.0.0/12 -j DROP
 iptables -A FORWARD -i eth0 -s 192.0.0.0/12 -d 192.0.0.0/12 -j DROP
 
-# محدودسازی مجاز FORWARD (خروجی)
+# مجوز FORWARD روی پورت‌های ضروری
 iptables -A FORWARD -p tcp --dport 80 -j ACCEPT
 iptables -A FORWARD -p tcp --dport 443 -j ACCEPT
 iptables -A FORWARD -p udp --dport 53 -j ACCEPT
 iptables -A FORWARD -p udp --dport 443 -j ACCEPT
+
+# بستن بقیه FORWARD
 iptables -A FORWARD -j DROP
 
-# Anti-scan با recent
+# Anti-scan با recent روی UDP
 iptables -A INPUT -p udp -m recent --name UDPSCAN --rcheck --seconds 10 --hitcount 3 -j DROP
 iptables -A INPUT -p udp -m recent --name UDPSCAN --set -j ACCEPT
 
-# سپس محدودسازی سرعت
+# محدودسازی سرعت UDP ورودی
 iptables -A INPUT -p udp -m limit --limit 10/second --limit-burst 20 -j ACCEPT
 
-# باقی UDPها بلاک
+# بلاک کامل بقیه UDP
 iptables -A INPUT -p udp -j DROP
 iptables -A INPUT -p udp --dport 16658 -j DROP
 iptables -A INPUT -p udp --dport 5564 -j DROP
