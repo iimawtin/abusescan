@@ -198,22 +198,18 @@ chmod +x /usr/local/bin/firewall-log-watcher.sh
 cat << 'EOF' > /usr/local/bin/firewall-monitor.sh
 #!/bin/bash
 
-LOGFILE="/var/log/syslog"  # لاگ کامل برای UDP و SSH
+LOGFILE="/var/log/syslog"
 TMPFILE="/tmp/firewall-scan.tmp"
+NOTIFIED_FILE="/tmp/notified-ips.txt"
 IPSET_BLOCK="blacklist"
 IPSET_SUBNET_BLOCK="blacklist_subnet"
 HOSTNAME=$(hostname)
 TOKEN="__TOKEN__"
 CHAT_ID="__CHATID__"
 
-# ساخت ipset اگر وجود نداشت
-if ! ipset list $IPSET_BLOCK &>/dev/null; then
-    ipset create $IPSET_BLOCK hash:ip
-fi
-
-if ! ipset list $IPSET_SUBNET_BLOCK &>/dev/null; then
-    ipset create $IPSET_SUBNET_BLOCK hash:net
-fi
+# ساخت ipset‌ها در صورت نبود
+ipset list $IPSET_BLOCK &>/dev/null || ipset create $IPSET_BLOCK hash:ip
+ipset list $IPSET_SUBNET_BLOCK &>/dev/null || ipset create $IPSET_SUBNET_BLOCK hash:net
 
 # لیست سفید اولیه
 WHITELIST=(
@@ -223,16 +219,18 @@ WHITELIST=(
   "8.8.8.8"
 )
 
-# افزودن IPهای خود سرور و تونل‌ها به لیست سفید
+# افزودن آی‌پی‌های لوکال و تونل‌ها به لیست سفید
 LOCAL_IPS=$(hostname -I | tr ' ' '\n')
 TUNNEL_IPS=$(ip -o -f inet addr show | grep -E 'tun|wg' | awk '{print $4}' | cut -d/ -f1)
-
 for ip in $LOCAL_IPS $TUNNEL_IPS; do
   WHITELIST+=("$ip")
 done
 
-# استخراج آی‌پی‌ها از لاگ syslog (همه نوع حمله)
-grep -E "Failed password|scan|BLOCKED-UDP-OUT|ABUSE-UDP" "$LOGFILE" \
+# ساخت فایل اگر وجود نداشت
+touch "$NOTIFIED_FILE"
+
+# استخراج آی‌پی‌های مشکوک از لاگ اخیر
+tail -n 500 "$LOGFILE" | grep -E "Failed password|scan|BLOCKED-UDP-OUT|ABUSE-UDP" \
   | grep -oE 'SRC=([0-9]{1,3}\.){3}[0-9]{1,3}' \
   | cut -d= -f2 > "$TMPFILE"
 
@@ -250,18 +248,19 @@ for ip in $(sort "$TMPFILE" | uniq); do
     continue
   fi
 
-  if ! ipset test $IPSET_BLOCK $ip &>/dev/null; then
+  # فقط اگر آی‌پی بلاک نشده و پیام هم قبلاً نرفته
+  if ! ipset test $IPSET_BLOCK $ip &>/dev/null && ! grep -Fxq "$ip" "$NOTIFIED_FILE"; then
     ipset add -exist $IPSET_BLOCK $ip
     subnet=$(echo $ip | awk -F. '{print $1"."$2"."$3".0/24"}')
     ipset add -exist $IPSET_SUBNET_BLOCK $subnet
     echo "$(date) - Blocked IP: $ip from $HOSTNAME" >> /var/log/firewall.log
+    echo "$ip" >> "$NOTIFIED_FILE"
     curl -s -X POST "https://api.telegram.org/bot$TOKEN/sendMessage" \
       -d "chat_id=$CHAT_ID" \
       -d "text=🚨 آی‌پی $ip در سرور $HOSTNAME بلاک شد." > /dev/null 2>&1
   fi
 done
 
-# پاک‌سازی فایل موقتی
 rm -f "$TMPFILE"
 EOF
 
