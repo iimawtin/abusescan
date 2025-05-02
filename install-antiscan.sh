@@ -132,15 +132,24 @@ iptables -A HIGHPORTS -j DROP
 iptables -A OUTPUT -p udp --dport 5564 -j DROP
 iptables -A OUTPUT -p udp --dport 16658 -j DROP
 
-# بلاک لیست IP و Subnet
+# بلاک لیست IP و Subnet روی INPUT
 iptables -A INPUT -m set --match-set blacklist src -j DROP
 iptables -A INPUT -m set --match-set blacklist_subnet src -j DROP
 
+# جلوگیری از ارتباط خروجی به IPهای بلاک‌شده
+if ! iptables -C OUTPUT -m set --match-set blacklist dst -j DROP 2>/dev/null; then
+  iptables -A OUTPUT -m set --match-set blacklist dst -j DROP
+fi
+
+if ! iptables -C OUTPUT -m set --match-set blacklist_subnet dst -j DROP 2>/dev/null; then
+  iptables -A OUTPUT -m set --match-set blacklist_subnet dst -j DROP
+fi
+
 # قوانین ضد اسکن TCP
-iptables -A INPUT -p tcp --tcp-flags ALL NONE -j LOG --log-prefix "NULL scan: "
-iptables -A INPUT -p tcp --tcp-flags ALL FIN,PSH,URG -j LOG --log-prefix "XMAS scan: "
-iptables -A INPUT -p tcp --tcp-flags ALL FIN -j LOG --log-prefix "FIN scan: "
-iptables -A INPUT -p tcp --tcp-flags SYN,FIN SYN,FIN -j LOG --log-prefix "SYN/FIN scan: "
+iptables -A INPUT -p tcp --tcp-flags ALL NONE -j LOG --log-prefix "NULL scan: " --log-level 4
+iptables -A INPUT -p tcp --tcp-flags ALL FIN,PSH,URG -j LOG --log-prefix "XMAS scan: " --log-level 4
+iptables -A INPUT -p tcp --tcp-flags ALL FIN -j LOG --log-prefix "FIN scan: " --log-level 4
+iptables -A INPUT -p tcp --tcp-flags SYN,FIN SYN,FIN -j LOG --log-prefix "SYN/FIN scan: " --log-level 4
 
 # محدودسازی ترافیک داخلی روی FORWARD
 iptables -A FORWARD -i eth0 -s 10.0.0.0/8 -d 10.0.0.0/8 -j DROP
