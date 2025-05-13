@@ -51,6 +51,10 @@ iptables -t nat -F
 iptables -t nat -X
 ipset flush
 
+# ساخت ipset‌ها در صورت نبود
+ipset list blacklist &>/dev/null || ipset create blacklist hash:ip
+ipset list blacklist_subnet &>/dev/null || ipset create blacklist_subnet hash:net
+
 # دریافت و اجرای به‌روز‌رسانی لیست سیاه
 curl -fsSL https://raw.githubusercontent.com/iimawtin/abusescan/main/update-blacklist.sh \
   -o /usr/local/bin/update-blacklist.sh >/dev/null 2>&1
