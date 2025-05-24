@@ -135,6 +135,7 @@ iptables -A HIGHPORTS -j DROP
 # بستن بعضی UDPهای خطرناک خاص
 iptables -A OUTPUT -p udp --dport 5564 -j DROP
 iptables -A OUTPUT -p udp --dport 16658 -j DROP
+iptables -A OUTPUT -p udp --dport 166 -j DROP
 
 # بلاک لیست IP و Subnet روی INPUT
 iptables -A INPUT -m set --match-set blacklist src -j DROP
@@ -182,6 +183,7 @@ iptables -A INPUT -p udp -m limit --limit 10/second --limit-burst 20 -j ACCEPT
 iptables -A INPUT -p udp -j DROP
 iptables -A INPUT -p udp --dport 16658 -j DROP
 iptables -A INPUT -p udp --dport 5564 -j DROP
+iptables -A INPUT -p udp --dport 166 -j DROP
 
 # ذخیره قوانین
 netfilter-persistent save >/dev/null 2>&1
