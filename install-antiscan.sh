@@ -55,6 +55,23 @@ ipset flush
 ipset list blacklist &>/dev/null || ipset create blacklist hash:ip
 ipset list blacklist_subnet &>/dev/null || ipset create blacklist_subnet hash:net
 
+# اجازه به loopback و Docker
+iptables -I INPUT  -i lo -j ACCEPT
+iptables -I OUTPUT -o lo -j ACCEPT
+
+# باز کردن پورت‌های اصلی
+iptables -I INPUT -p tcp -m multiport --dports 22,80,443,3306,2053,8080,8443,8010 -j ACCEPT
+
+# تنظیم قوانین Docker
+iptables -N DOCKER-USER 2>/dev/null || true
+iptables -I DOCKER-USER -i br+ -j ACCEPT
+iptables -I DOCKER-USER -o br+ -j ACCEPT
+iptables -I FORWARD     -i br+ -j ACCEPT
+iptables -I FORWARD     -o br+ -j ACCEPT
+
+iptables -I DOCKER-USER -s 172.16.0.0/12 -p udp --dport 53 -j ACCEPT
+iptables -I DOCKER-USER -s 172.16.0.0/12 -p tcp --dport 53 -j ACCEPT
+
 # دریافت و اجرای به‌روز‌رسانی لیست سیاه
 curl -fsSL https://raw.githubusercontent.com/iimawtin/abusescan/main/update-blacklist.sh \
   -o /usr/local/bin/update-blacklist.sh >/dev/null 2>&1
@@ -67,10 +84,10 @@ iptables -P FORWARD DROP
 iptables -P OUTPUT DROP
 
 # اجازه به اتصال‌های موجود و ICMP
-iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-iptables -A INPUT -p icmp -j ACCEPT
-iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-iptables -A OUTPUT -p icmp -j ACCEPT
+iptables -I INPUT  -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+iptables -I OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+iptables -I INPUT  -p icmp -j ACCEPT
+iptables -I OUTPUT -p icmp -j ACCEPT
 
 # اجازه به ترافیک پروتکل SIT (proto 41)
 iptables -A INPUT -p 41 -j ACCEPT
